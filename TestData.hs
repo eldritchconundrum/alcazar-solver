@@ -78,6 +78,10 @@ daily5x8 = buildPuzzle (5,8)
            [(0,2),(1,1),(4,2)] -- raisonnement sur les doors et la parité et des sous-parties
            [(2,5),(2,6),(2,7)]
 
+mars4Puz = buildPuzzle (7,10) [(0,0),(4,0),(5,0),(6,1),(0,2),(6,3),(0,4),(6,5),(6,7),(2,9),(4,9)]
+           [(3,1),(3,4),(4,3),(0,5),(5,5),(4,7)]
+           [(1,2),(1,4),(4,3),(3,4),(1,7),(1,8),(4,8)]
+
 -- "1 13".split.map(&:to_i).each_slice(2) { |n,m| print "(#{n},#{m})," }; puts; puts
 
 
@@ -85,8 +89,10 @@ unitTestReduce3RemoveEdges = buildPuzzle (16,16) [(0,1),(15,7)] [] $
                              [(x,y) | x <- [1,3..13], y <- [2..14]] ++
                              [(x,y) | x <- [1,3..13], y <- if x `mod` 4 == 1 then [0,1] else [15]]
 
-{-
+feb13 = buildPuzzle (7,10) (concat [[(0,i),(i,0),(6,i)] | i <- [1,3,5]] ++ [(0,7),(6,7),(0,9),(2,9),(5,9)])
+        [(3,1),(4,1),(5,2),(6,2),(2,5),(3,5)] [(4,2),(1,3),(2,3),(2,5),(2,6),(2,7),(1,8),(1,9),(4,7)]
 
+{-
 
 https://github.com/sjb3d/alcazam
 +   +---+   +---+---+---+---+---+---+   +
@@ -174,5 +180,7 @@ x|x|xxxxx|x xxx|x
 x|x x xxx x|x|x|x
 x0-0-0-0-0-0 0-0x
 xxxxxxxxxxxxxxxxx
+
+https://pbs.twimg.com/media/CAtS1yPWgAA7jtY.png:large
 
 -}

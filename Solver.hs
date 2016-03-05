@@ -6,6 +6,7 @@ import Utils
 import Puzzle
 import Graph
 import Doors
+import Strategy
 
 bruteForce :: SolvingData -> [[Node]]
 bruteForce d = map (expandPaths (paths d)) $ cleanUpSolutions $ bruteForceImpl d where
@@ -35,7 +36,7 @@ bruteForceImpl d = concat [dfs d2 [d1] d1 ((delete d1 . allNodes . graph) d) com
 -- combinaison des différentes méthodes de recherche de solutions
 
 data Solving a = NoSolution
-               | NotBetter a
+               | NotBetter a -- serait-ce plus simple de définir NotBetter sans argument ?
                | Better a
 
 toMaybe NoSolution = Nothing
@@ -44,11 +45,13 @@ toMaybe (Better d) = Just d
 
 extract = fromJust . toMaybe
 
-instance Monad Solving where
+{-
+instance Monad Solving where -- I can haz do notation
   NoSolution >>= solveFunc = NoSolution
   NotBetter d >>= solveFunc = solveFunc d
   Better d >>= solveFunc = solveFunc d
   return = NotBetter
+-}
 
 instance Show a => Show (Solving a) where
   show NoSolution = "No solution exists."
@@ -62,20 +65,34 @@ converge search d = case search d of
   Better d -> converge search d
   d -> d
 
-type Strategy = String -- small DSL
-reduce :: Strategy -> SolvingData -> SearchResult
-reduce [] d = NotBetter d
-reduce (c:'*':cs) d = converge (reduceFunction c) d >>= reduce cs -- TODO parenthèses pour converger une composition  
-reduce (c:cs) d = reduceFunction c d >>= reduce cs
+reduceList :: [SolvingData -> SearchResult] -> SolvingData -> SearchResult
+reduceList fs d = reduceList' False fs d where -- preserve whether one of the reductions worked
+  reduceList' False [] d = NotBetter d
+  reduceList' True [] d = Better d
+  reduceList' b (f:fs) d = case f d of
+    NoSolution -> NoSolution
+    NotBetter d -> reduceList' b fs d
+    Better d -> reduceList' True fs d
 
-reduceFunction :: Char -> SolvingData -> SearchResult
-reduceFunction '3' = reduceGraph3
-reduceFunction 'e' = removeEdges
-reduceFunction 'd' = deduceDoorStatus
-reduceFunction 'l' = edgeOrLackOfNeighbors
-reduceFunction 'b' = bouncing
-reduceFunction '2' = reduceGraph2 -- l over 3*, comme "l" mais en réduisant via 3* avant de chercher l'impossibilité
---reduceFunction 'B' = reduceGraph2B -- b over 3*
+
+reduceStrategy :: String -> SolvingData -> SearchResult
+reduceStrategy strat d = executeStrategy (parseStrategy strat) d where
+
+  -- small DSL, see Strategy.hs
+  executeStrategy :: Strategy -> SolvingData -> SearchResult
+  executeStrategy (SingleReduction c) d = reduceFunction c d
+  executeStrategy (Reductions strats) d = reduceList (map executeStrategy strats) d
+  executeStrategy (Repetition strat) d = converge (executeStrategy strat) d
+
+  reduceFunction :: Char -> SolvingData -> SearchResult
+  reduceFunction '3' = reduceGraph3
+  reduceFunction 'e' = removeEdges
+  reduceFunction 'd' = deduceDoorStatus
+  reduceFunction 'b' = bouncing
+  reduceFunction 'l' = edgeOrLackOfNeighbors
+  reduceFunction '2' = reduceGraph2 -- l over 3*, comme "l" mais en réduisant via 3* avant de chercher l'impossibilité
+  --reduceFunction 'B' = reduceGraph2B -- b over 3*
+  reduceFunction c = error $ "Non-exhaustive patterns in function reduceFunction: " ++ [c]
 
 
 {-
@@ -133,6 +150,8 @@ plus lent après (et mon code est moins lisible).
 
 -}
 
+-- Attention ! Renvoyer Better quand on n'est pas sûr entraine une boucle infinie dans reduceList !
+
 -------------------------------------------------- déduit les portes obligatoires si elles n'ont qu'un voisin. rapide.
 
 deduceDoorStatus :: SolvingData -> SearchResult
@@ -140,7 +159,9 @@ deduceDoorStatus d = let
   nodesThatMustBeDoors = [n | (n,ns) <- graph d, length ns == 1]
   in case setObligatoryDoors nodesThatMustBeDoors (doorStatus d) of
     Nothing -> NoSolution -- peut également trouver une impossibilité si plus de 3 doors obligatoires
-    Just newDoors -> Better d { _doorStatus = newDoors }
+    Just newDoors -> if newDoors == (doorStatus d)
+                     then NotBetter d
+                     else Better d { _doorStatus = newDoors }
 
 -------------------------------------------------- trouve les edges en trop des portes dans des paths. rapide.
 
@@ -192,17 +213,17 @@ turnEdgeIntoPathIfNoSolutionOtherwise isImpossible d = firstReduction reducedGra
 
 -- Une version plus générale, et bien plus lente, de reduceGraph3.
 -- Si on vient de passer "3*", ça ne trouvera guère que les path qui s'arrêtent à 1 d'une door sans autre edge.
-edgeOrLackOfNeighbors :: SolvingData -> SearchResult
+edgeOrLackOfNeighbors :: SolvingData -> SearchResult -- 'l'
 edgeOrLackOfNeighbors = turnEdgeIntoPathIfNoSolutionOtherwise obviouslyNoSolution1
 
-bouncing :: SolvingData -> SearchResult
+bouncing :: SolvingData -> SearchResult -- 'b'
 bouncing = turnEdgeIntoPathIfNoSolutionOtherwise obviouslyNoSolution2
 
-reduceGraph2 :: SolvingData -> SearchResult
-reduceGraph2 = turnEdgeIntoPathIfNoSolutionOtherwise (obviouslyNoSolution1 `onReduced` reduce "3*")
+reduceGraph2 :: SolvingData -> SearchResult -- '2'
+reduceGraph2 = turnEdgeIntoPathIfNoSolutionOtherwise (obviouslyNoSolution1 `onReduced` reduceStrategy "3*")
 
 --reduceGraph2B :: SolvingData -> SearchResult
---reduceGraph2B = turnEdgeIntoPathIfNoSolutionOtherwise (obviouslyNoSolution2 `onReduced` reduce "3*")
+--reduceGraph2B = turnEdgeIntoPathIfNoSolutionOtherwise (obviouslyNoSolution2 `onReduced` reduceStrategy "3*")
 
 onReduced :: (SolvingData -> Bool) -> (SolvingData -> SearchResult) -> (SolvingData -> Bool)
 f `onReduced` g = \d -> case g d of
