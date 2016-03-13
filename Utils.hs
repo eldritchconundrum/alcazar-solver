@@ -20,19 +20,3 @@ timeIO message action = do
 
 time :: String -> a -> IO a
 time message value = timeIO message (evaluate value)
-
-{-
-strictEvalIO is not needed anymore since I found Control.Exception.Base.evaluate.
-
-strictEvalIO :: Show a => a -> IO a -- This assumes show deeply evaluates.
-strictEvalIO x = do
-  writeFile "/dev/null" (show x)
-  return x
-
--- pour tester : solveAndPrint "l*d3*b*3*" valentinePuz
-
-strictEvalIO_ThatDoesntWork :: Show a => a -> IO a -- This assumes show deeply evaluates.
-strictEvalIO_ThatDoesntWork x = do
-  let y = (show . length . show) x
-  return (seq y x)
--}

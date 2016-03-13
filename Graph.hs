@@ -17,7 +17,7 @@ import Puzzle
 import Doors
 
 
--- This type represents an obligatory path.
+-- This type represents an obligatory path, one that has to be part of any possible solution.
 type Path = [Node]
 bothEnds p = (first p, last p)
 inside = init . tail
@@ -43,7 +43,7 @@ expandPaths ps nodeList = let
 updatePaths :: [Node] -> [Path] -> [Path]
 updatePaths [n1,n2] ws = updatePaths2 n1 n2 ws
 updatePaths [n1,nw,n2] ws = updatePaths3 n1 nw n2 ws
-updatePaths _ _ = error "can I has implematoin kthx"  
+updatePaths _ _ = error "can I haz implematoin kthx"  
 
 updatePaths2 :: Node -> Node -> [Path] -> [Path]
 updatePaths2 n1 n2 ws =
@@ -120,6 +120,7 @@ the following:
 
 * The graph must be non-oriented (symmetric matrix).
 * Doors are nodes in the graph.
+* nodes of graph + nodes inside paths = all the nodes of the puzzle
 * ...
 
 -}
@@ -145,6 +146,9 @@ neighborsOf puz (x,y) = let (w,h) = size puz in
             if y == 0 || (x,y - 1) `elem` wallsDown puz then [] else [(x,y-1)]]
 
 
+-- This function is like buildInitialData but also exploits door
+-- parity, I need its name to be short because I use it all the time
+-- from ghci.
 -- TODO: find a better name 
 start :: Puzzle -> SolvingData
 start puz = let
@@ -205,7 +209,7 @@ addPath ns d =
   let g = graph d
       newGraph = updateGraphForNewPath newPath g
       newPaths@(newPath:_) = updatePaths ns (paths d)
-  in if length (allNodes (graph d) `intersect` ns) /= length ns then error "bad edge" else
+  in if length (allNodes g `intersect` ns) /= length ns then error "bad edge" else
        case updateDoors (not . empty . neighbors newGraph) (doorStatus d) of
          Nothing -> Nothing -- Nothing means no solution because door was collapsed
          Just ds -> Just $ d { _paths = newPaths,
@@ -281,6 +285,7 @@ asciiArt' d ps = (unlines . map concat) cellMatrix where
   (filledCell, emptyCell, pathCell, deducedFilledCell) = ("▒▒", "  ", "░░", "▓▓")
   -- http://www.fileformat.info/info/unicode/block/miscellaneous_symbols_and_pictographs/list.htm
   (possibleDoorCell1, possibleDoorCell2, obligatoryDoorCell) = ("🐱 ", "🐵 ", "✅ ") -- "🐮 "
+--  (possibleDoorCell1, possibleDoorCell2, obligatoryDoorCell) = ("░░", "░░", "░░") -- "🐮 "
 
 areAdjacentInAPath :: [Path] -> [Node] -> Bool
 areAdjacentInAPath ps cs = any (cs `isInfixOf`) ps || any ((reverse cs) `isInfixOf`) ps

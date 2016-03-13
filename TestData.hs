@@ -6,7 +6,7 @@ multipleSolutionPuz = buildPuzzle (3,3) [(0,0),(2,2)] [] []
 
 
 instantaneousPuzzles = [smallestPuz, threeSquaresPuz, trivialPuz, simpleAsymmetricPuz, zorro1Puz, zorro2Puz,
-                        provablyUselessEndpointPuz, fourPuz, my4x4Puz, fivePuz
+                        provablyUselessDoorPuz, fourPuz, my4x4Puz, fivePuz
                         --sixPuz, transposePuzzle (multiple4x4Rooms 2)
                        ]
 smallestPuz = buildPuzzle (2,1) [(0,0),(1,0)] [] []
@@ -15,17 +15,17 @@ trivialPuz = buildPuzzle (2,2) [(1,0),(1,1)] [(1,0)] []
 simpleAsymmetricPuz = buildPuzzle (4,2) [(0,0),(3,0)] [] [(2,0)]
 zorro1Puz = buildPuzzle (3,3) [(0,0),(2,2)] [(2,1)] []
 zorro2Puz = buildPuzzle (3,3) [(0,0),(2,2)] [(0,0),(1,0),(1,1),(2,1)] []
-provablyUselessEndpointPuz = buildPuzzle (3,3) [(0,0),(2,0),(1,2)] [] [(0,0)]
+provablyUselessDoorPuz = buildPuzzle (3,3) [(0,0),(2,0),(1,2)] [] [(0,0)]
 fourPuz = buildPuzzle (4,4) [(0,1),(2,0),(3,2)] [(2,0),(2,1),(1,1)] [(2,2)]
 my4x4Puz = buildPuzzle (4,4) [(0,0),(0,1),(1,0),(2,3)] [(1,1)] [(1,1),(1,3)]
 fivePuz = buildPuzzle (5,5) [(2,0),(0,2),(2,4),(4,2)] [(3,0),(1,1),(2,2),(3,2)] [(2,1),(1,2),(1,3)]
 sixPuz = buildPuzzle (6,6) [(5,5),(5,2)] [(2,4),(4,2),(4,3),(3,1)] [(0,1),(2,1),(1,3),(2,4),(4,5)]
 multiple4x4Rooms n = buildPuzzle (4,4*n) [(1,0),(1,4*n-1)] (concat [[(0,4*i-1),(3,4*i-1)] | i <- [1..n-1]]) []
-multiple4x4RoomsWithEndpoints n = buildPuzzle (4,4*n) ([(1,0),(1,4*n-1)] ++ [(1,i) | i <- [3..4*n-4]])
+multiple4x4RoomsWithDoors n = buildPuzzle (4,4*n) ([(1,0),(1,4*n-1)] ++ [(1,i) | i <- [3..4*n-4]])
                                   (concat [[(0,4*i-1),(2,4*i-1),(3,4*i-1)] | i <- [1..n-1]]) []
 
 slowerPuzzles = [jsPuz, {-daily6x9Puz, sixRoomsPuz, excellentHandMadePuz,-}
-                 transposePuzzle (multiple4x4RoomsWithEndpoints 3)]
+                 transposePuzzle (multiple4x4RoomsWithDoors 3)]
 jsPuz = buildPuzzle (6,7) [(0,3),(5,3)] [(1,1)] [(3,1),(2,2),(1,3),(3,3)]
 daily6x9Puz = buildPuzzle (6,9) [(1,0),(4,0),(0,7),(5,7),(4,8)]
               [(2,1),(3,1),(1,6),(4,4)] [(2,0),(1,3),(1,4),(3,3),(3,4),(1,6)]
@@ -46,6 +46,10 @@ book10x15Puz = -- large but reduces very well
    (2,7),(4,8),(7,8),(9,8),(0,9),(1,10),(2,10),(3,10),(4,10),(6,10),(5,11),(2,12),(3,12),(1,13)]
   [(0,2),(0,5),(2,3),(2,5),(2,6),(2,9),(3,1),(3,2),(4,4),(4,5),(4,7),(6,1),
    (7,2),(7,5),(7,7),(6,6),(5,8),(5,9),(7,9),(6,10),(5,11),(7,11),(7,13),(8,12),(5,14),(5,13),(6,12)]
+
+hardBook10x15Puz = -- the same problem but more difficult, with the same solution, still unique
+  buildPuzzle (10,15) [(3,0),(4,0),(6,0),(7,0),(8,0),(9,0),(9,1),(9,2),(9,5),(9,7),(9,9),(9,10),(9,11),(9,13),(8,14),(6,14),(5,14),(4,14),(2,14),(0,13),(0,3),(0,1),(0,10),(0,12),(0,8),(0,9),(0,4),(0,5),(0,6),(2,0),(5,0),(9,3),(9,4),(0,11),(1,14),(7,14),(9,12)] [(1,1),(3,0),(6,0),(5,2),(7,3),(9,3),(1,4),(6,5),(1,6),(2,7),(7,8),(9,8),(0,9),(1,10),(3,10),(6,10),(5,11),(2,12),(3,12),(1,13)] [(0,2),(0,5),(2,3),(2,6),(3,1),(4,4),(4,7),(6,1),(7,2),(7,5),(7,7),(6,6),(6,10),(5,11),(7,11),(7,13),(8,12),(5,13)]
+
 
 valentinePuz = -- https://twitter.com/mhuovila/status/566769283187748864
   buildPuzzle (12,10) [(0,2),(0,4),(0,5),(2,7),(3,0),(4,1),(5,9),(8,0),(9,0),(9,7),(10,1),(11,2),(11,4),(11,5)] wd wr where
@@ -68,7 +72,7 @@ valentineSol = [(2,7),(2,6),(1,6),(1,5),(0,5),(0,4),(1,4),(1,3),(0,3),(0,2),(1,2
 
 daily7x10Puz = buildPuzzle (7,10) [(2,0), (6,3), (6,5), (6,7), (2,9), (4,9)] [(1,4), (4,3), (6,1), (6,7), (2,7), (1,6)]
                [(2,1),(1,2),(4,3),(1,4),(3,4),(4,5),(1,7)]
-manyEndpoints = buildPuzzle (7,10) [(0,0),(1,0),(2,0),(5,0),(6,1),(6,3),(6,5),(6,6),(6,7),(6,8),
+manyDoors = buildPuzzle (7,10) [(0,0),(1,0),(2,0),(5,0),(6,1),(6,3),(6,5),(6,6),(6,7),(6,8),
                                (0,2),(0,4),(0,6),(0,8),(1,9),(2,9),(3,9),(4,9),(5,9),(6,9)]
                 [(2,1),(4,3),(2,5),(3,7),(4,8)] [(1,2),(1,3),(1,5),(1,6),(3,4),(4,3),(4,2),(3,8),(5,7)]
 dailyOther7x10 = buildPuzzle (7,10) [(1,0),(3,0),(5,0),(0,1),(6,1),(0,3),(6,3),(0,5),(6,5),(0,7),(6,7),(1,9),(4,9)]

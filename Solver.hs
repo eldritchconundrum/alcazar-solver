@@ -66,12 +66,12 @@ converge search d = case search d of
   d -> d
 
 reduceList :: [SolvingData -> SearchResult] -> SolvingData -> SearchResult
-reduceList fs d = reduceList' False fs d where -- preserve whether one of the reductions worked
+reduceList fs d = reduceList' False fs d where -- preserve whether any of the reductions yielded an improvement
   reduceList' False [] d = NotBetter d
   reduceList' True [] d = Better d
-  reduceList' b (f:fs) d = case f d of
+  reduceList' isBetter (f:fs) d = case f d of
     NoSolution -> NoSolution
-    NotBetter d -> reduceList' b fs d
+    NotBetter d -> reduceList' isBetter fs d
     Better d -> reduceList' True fs d
 
 
@@ -94,61 +94,6 @@ reduceStrategy strat d = executeStrategy (parseStrategy strat) d where
   --reduceFunction 'B' = reduceGraph2B -- b over 3*
   reduceFunction c = error $ "Non-exhaustive patterns in function reduceFunction: " ++ [c]
 
-
-{-
-
-Pour l'instant j'ai un bruteforce, mais avant de l'exécuter je
-simplifie le problème en déduisant des faits de la même manière que je
-résous manuellement. Les techniques de résolution ont une lettre
-associée.
-
-3 : localisation des paths de longueur 3 (réduction des noeuds sans
-porte avec seulement deux voisins). Immédiat.
-
-b : localisation des paths de longueur 2 (aka "bouncing" : quand le
-problème devient prouvablement impossible en enlevant un
-edge). Paramétrable par le type de recherche d'impossibilité. Rendrait
-obsolète la précédente via join, si elle n'était pas bien plus lente.
-
-automatique en début :
-exploitation de la parité : sur quels (x+y)`mod`2 sont les doors ?
-(une fois, au début, dans puzzle, pas dans graph)
-
-
-TODO: avant bruteforce, re-réduire après itération sur les paires de portes. (essayer sur excellentHandMadePuz ?)
-
-TODO: si "le graphe sans un endpoint" est impossible, alors cet endpoint devient obligatoire
-
-TODO: le contraire du bouncing : supposer qu'un edge quelconque est un path, et si c'est impossible, alors l'enlever du graphe.
-
--- graphe "prouvablement impossible" si :
--- doorStatus impossible (<2 possible doors, ou >2 obligatory doors)
--- >1 composantes fortement connexes
-
-TODO: tenter de découper le graphe en deux "zones" de superficie pas trop inégale qui ne communiquent que via 1 ou 2 bottlenecks, résoudre/simplifier les sous-graphes, puis combiner ça
-
-TODO: si deux sous-graphes ne sont connectés que par un seul edge,
-alors il y a une door oblig de chaque côté
-
-TODO: avant je pouvais écrire """reduce $ addWormhole2 (29,33) $ addWormhole2 (13,17) $ reduce (graphOf (multiple4x4RoomsWithEndpoints 4))""", voir comment faire maintenant
-
-TODO: un éditeur de niveaux pour écrire des tests plus facilement. dans mes rêves.
-
-TODO: tester Control.Concurrent.compete
-
-trouver s'il existe un moyen plus efficace que le moyen naïf de savoir
-quels edges d'un graphe créeraient des composantes connexes s'ils
-étaient enlevés ?
-  hmm c'est quoi le moyen naïf déjà ? O(n) ?
-  trouver d'abord les cycles, puis essayer les edges pas entre deux noeuds d'un cycle ?
-
-TO NOT DO: profiling, changer les structures de données en Array ou
-autre, voir si c'est plus performant... ne pas faire ça parce que 1)
-rester high-level c'est plus rigolo, 2) ça marche pas, je ne sais pas
-faire, à chaque fois que j'essaye d'optimiser du haskell c'est juste
-plus lent après (et mon code est moins lisible).
-
--}
 
 -- Attention ! Renvoyer Better quand on n'est pas sûr entraine une boucle infinie dans reduceList !
 
@@ -231,11 +176,6 @@ f `onReduced` g = \d -> case g d of
   NotBetter d -> f d
   Better d -> f d
 
--- idée d'amélio à creuser : gérer les invalidations de parties de
--- graphe, pour ne pas essayer toujours les mêmes réductions qui ne
--- marchent toujours pas, et accélérer "2*" (parcours des reducedGraphs en O(n))
-
-
 obviouslyNoSolution :: SolvingData -> SearchResult -- SLOW
 obviouslyNoSolution d =
   if obviouslyNoSolution1 d || obviouslyNoSolution2 d
@@ -243,7 +183,7 @@ obviouslyNoSolution d =
   else NotBetter d
 
 obviouslyNoSolution1 d = any (doesNotHaveEnoughNeighbors (doorStatus d)) (graph d)
-obviouslyNoSolution2 d = any (hasOnlyTwoNeighborsThatAreTheEndsOfOnePath (paths d)) (graph d)
+obviouslyNoSolution2 d = any (hasOnlyTwoNeighborsThatAreTheEndsOfASinglePath (paths d)) (graph d)
 
 doesNotHaveEnoughNeighbors :: DoorStatus -> (Node, [Node]) -> Bool
 doesNotHaveEnoughNeighbors ds (n,ns) = case () of
@@ -251,6 +191,6 @@ doesNotHaveEnoughNeighbors ds (n,ns) = case () of
   _ | possibleDoors ds `contains` n -> length ns < 1 -- si un noeud qui est peut-être une porte a moins de 1 voisin
   _ -> length ns < 2 -- si un noeud qui n'est pas une porte a - de 2 voisins (usuellement déjà réduit par reduceGraph3)
 
-hasOnlyTwoNeighborsThatAreTheEndsOfOnePath ws (n,ns) = any (setEqual ns) $ map bothEnds ws where
+hasOnlyTwoNeighborsThatAreTheEndsOfASinglePath ws (n,ns) = any (setEqual ns) $ map bothEnds ws where
   setEqual (n1:n2:[]) (f,l) = (n1 == f && n2 == l) || (n2 == f && n1 == l)
   setEqual _ (f,l) = False -- pas de solution si un noeud a seulement 2 voisins qui sont les extrémités d'un même path

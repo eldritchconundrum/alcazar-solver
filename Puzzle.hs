@@ -5,7 +5,8 @@ module Puzzle (
   Puzzle(), -- hide the constructor
   size, doors, wallsDown, wallsRight,
   buildPuzzle,
-  transposePuzzle
+  transposePuzzle,
+  showPuzzle,
   ) where
 
 import Data.List
@@ -32,6 +33,9 @@ size = _size
 doors = _doors
 wallsDown = _wallsDown
 wallsRight = _wallsRight
+
+--instance Show Puzzle where show = showPuzzle
+showPuzzle puz = unwords $ ["buildPuzzle", show $ size puz, show $ doors puz, show $ wallsDown puz, show $ wallsRight puz]
 
 {-
 

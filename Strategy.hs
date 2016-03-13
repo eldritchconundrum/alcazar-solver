@@ -9,6 +9,9 @@ data Strategy = SingleReduction ReduceFunction
               | Repetition Strategy -- *
               deriving Eq
 
+parseStrategy :: String -> Strategy
+parseStrategy = read
+
 instance Show Strategy where
   show (SingleReduction rf) = [rf]
   show (Reductions sts) = show sts
@@ -18,23 +21,14 @@ instance Read Strategy where
   --readsPrec :: Int -> String -> [(Strategy, String)]
   readsPrec prec s = [parse [] s]
 
-parse :: [Strategy] -> String -> (Strategy, String) -- [Strategy] is a reversed buffer of already read strategies
-parse acc "" = (Reductions (reverse acc), "")
-parse acc (')':cs) = (Reductions (reverse acc), cs)
+parse :: [Strategy] -> String -> (Strategy, String)
+parse acc "" = (strategyFromList (reverse acc), "")
+parse acc (')':cs) = (strategyFromList (reverse acc), cs)
 parse acc ('(':cs) = parse strats rest where strats = inner : acc
                                              (inner, rest) = parse [] cs
 parse acc ('*':cs) = parse strats cs where strats = Repetition (head acc) : tail acc
 parse acc (c:cs) = parse strats cs where strats = SingleReduction c : acc
 
-
-parseStrategy = canonicalizeStrategy . read
-
-canonicalizeStrategy (Reductions strats) =
-  case [s |
-        s <- map canonicalizeStrategy strats,
-        s /= (Reductions [])]
-  of [s] -> s
-     ss -> Reductions ss
-canonicalizeStrategy (Repetition strat) = Repetition (canonicalizeStrategy strat)
-canonicalizeStrategy strat = strat
-
+strategyFromList :: [Strategy] -> Strategy
+strategyFromList [s] = s -- simplify a little
+strategyFromList ss = Reductions ss

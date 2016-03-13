@@ -56,7 +56,7 @@ setObligatoryDoors ns ds = foldr f (Just ds) ns where f n Nothing = Nothing
                                                       f n (Just ds) = setObligatoryDoor n ds
 
 
-setObligatoryDoor :: Node -> DoorStatus -> Maybe DoorStatus
+setObligatoryDoor :: Node -> DoorStatus -> Maybe DoorStatus -- Nothing means there is no solution
 setObligatoryDoor n' (NoClueAboutDoors ns) =
   if ns `contains` n'
   then Just $ OneDoorFound n' (delete n' ns)
