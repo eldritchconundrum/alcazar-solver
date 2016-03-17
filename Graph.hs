@@ -11,7 +11,7 @@ module Graph {-( -- This file should be split and renamed
   )-} where
 
 import Data.List
-import Data.Maybe (fromJust, fromMaybe)
+import Data.Maybe (fromJust, fromMaybe, mapMaybe)
 import Utils
 import Puzzle
 import Doors
@@ -22,31 +22,13 @@ type Path = [Node]
 bothEnds p = (first p, last p)
 inside = init . tail
 
--- replace in nodeList every consecutive [start,end] of a path by the full path
-expandPaths :: [Path] -> [Node] -> [Node]
-expandPaths ps nodeList = let
-  findOrientedPath :: Node -> [Path] -> Maybe Path
-  findOrientedPath n [] = Nothing
-  findOrientedPath n (w:ws) = let (f,l) = bothEnds w in case () of
-    _ | n == f -> Just w
-    _ | n == l -> Just (reverse w)
-    _ -> findOrientedPath n ws
-  expandPath [] = []
-  expandPath (n:ns) = case findOrientedPath n ps of
-    Nothing -> n : expandPath ns
-    Just p -> if last p /= first ns
-              then error "path half-followed"
-              else p ++ expandPath (tail ns)
-  in expandPath nodeList
---expandPaths [0,4,9,3,7,8,12,14,19] [[7,6,3],[4,5,2,1,0],[12,13,14]] == [0,1,2,5,4,9,3,6,7,8,12,13,14,19]
-
 updatePaths :: [Node] -> [Path] -> [Path]
-updatePaths [n1,n2] ws = updatePaths2 n1 n2 ws
-updatePaths [n1,nw,n2] ws = updatePaths3 n1 nw n2 ws
+updatePaths [n1,n2] ws = _updatePaths2 n1 n2 ws
+updatePaths [n1,nw,n2] ws = _updatePaths3 n1 nw n2 ws
 updatePaths _ _ = error "can I haz implematoin kthx"  
 
-updatePaths2 :: Node -> Node -> [Path] -> [Path]
-updatePaths2 n1 n2 ws =
+_updatePaths2 :: Node -> Node -> [Path] -> [Path]
+_updatePaths2 n1 n2 ws =
   let (atMostTwoPaths, otherWs) = partition (\w -> let (f,l) = bothEnds w in length (nub [f, l, n1, n2]) < 4) ws
       -- among [pre,sep,post], at most two of them will match the (at most two) paths
       -- we only have to find who's where, and reverse and init/tail the paths to avoid duplicate n1/n2
@@ -56,8 +38,8 @@ updatePaths2 n1 n2 ws =
       after = maybe [] tail $ find ((\(f,l) -> f == n2 && l /= n1) . bothEnds) pathsWithReverse
   in (before ++ [n1] ++ sep ++ [n2] ++ after) : otherWs
 
-updatePaths3 :: Node -> Node -> Node -> [Path] -> [Path]
-updatePaths3 n1 nw n2 ws = -- [n1,nw,n2] are distinct, (flatten ws) too.
+_updatePaths3 :: Node -> Node -> Node -> [Path] -> [Path]
+_updatePaths3 n1 nw n2 ws = -- [n1,nw,n2] are distinct, (flatten ws) too.
   let (atMostTwoPaths, otherWs) = partition (\w -> let (f,l) = bothEnds w in length (nub [f, l, n1, n2]) < 4) ws
       -- among [pre,sep1,sep2,post], at most two of them will match the (at most two) paths
       -- we only have to find who's where, and reverse and init/tail the paths to avoid duplicate n1/n2
@@ -75,6 +57,7 @@ updatePaths3 n1 nw n2 ws = -- [n1,nw,n2] are distinct, (flatten ws) too.
 
 -- This type is the adjacency lists of the graph that collapses obligatory paths into a single edge.
 type Graph = [(Node, [Node])]
+type Edge = (Node, Node)
 
 allNodes :: Graph -> [Node]
 allNodes g = map fst g
@@ -82,8 +65,8 @@ allNodes g = map fst g
 neighbors :: Graph -> Node -> [Node]
 neighbors g node = fromMaybe [] $ lookup node g
 
-updateGraphForNewPath :: Path -> Graph -> Graph
-updateGraphForNewPath w adjs = update adjs where
+updateGraphForNewPath_old :: Path -> Graph -> Graph
+updateGraphForNewPath_old w adjs = update adjs where
   (np1, np2) = bothEnds w
   nodesToDelete = inside w
   update [] = []
@@ -96,6 +79,17 @@ updateGraphForNewPath w adjs = update adjs where
   update ((n,ns):as) = (n, ns \\ nodesToDelete) : update as
   replaceItems olds new = nub . map replace where replace x = if olds `contains` x then new else x
 
+updateGraphForNewPath :: Path -> Graph -> Graph
+updateGraphForNewPath ps = mapMaybe update where
+  (np1, np2) = bothEnds ps
+  toDelete = inside ps
+  -- delete nodes that are inside the path
+  update (n,_)  | toDelete `contains` n = Nothing
+  -- replace the edges between an endpoint and a deleted node by a link to the other endpoint
+  update (n,ns) | n == np1              = Just $ (n, nub $ np2 : (ns \\ toDelete))
+  update (n,ns) | n == np2              = Just $ (n, nub $ np1 : (ns \\ toDelete))
+  -- delete edges from a node to a deleted node
+  update (n,ns) | otherwise             = Just $ (n,              ns \\ toDelete)
 
 
 -- This type augments the puzzle data with "obligatory paths" that
@@ -130,13 +124,14 @@ buildInitialData puz = let
   (w,h) = size puz
   cToN = coordsToNode (size puz)
   trimIsolatedNodes d = d { _graph = filter (not . isolated) (graph d) } where isolated (n,ns) = empty ns
-  -- nodes that are isolated in the puzzle are considered not part of the problem, and are left out of the graph.
+  -- nodes that are isolated in the puzzle are considered not part of the problem, and are left out of the graph. (see valentinePuz)
   in trimIsolatedNodes $
      SolvingData { _puzzle = puz,
                    _graph = [(cToN (x,y), map cToN $ neighborsOf puz (x,y))
                             | y <- [0..h-1], x <- [0..w-1]],
                    _doorStatus = NoClueAboutDoors $ map cToN (doors puz),
                    _paths = [] }
+
 neighborsOf :: Puzzle -> Coords -> [Coords]
 neighborsOf puz (x,y) = let (w,h) = size puz in
   if x < 0 || y < 0 || x >= w || y >= h then [] else
@@ -153,13 +148,13 @@ neighborsOf puz (x,y) = let (w,h) = size puz in
 start :: Puzzle -> SolvingData
 start puz = let
   d = buildInitialData puz
-  newDoorStatus = case exploitDoorParity d of
+  newDoorStatus = case _exploitDoorParity d of
     Just ds -> ds
     Nothing -> error "no solutions because of doors parity"
   in d { _doorStatus = newDoorStatus }
 
-puzzleParity :: SolvingData -> Parity
-puzzleParity d = let
+_puzzleParity :: SolvingData -> Parity
+_puzzleParity d = let
   ns = map fst (graph d)
   ev = evenCoords ((size . puzzle) d)
   od = oddCoords ((size . puzzle) d)
@@ -169,8 +164,8 @@ puzzleParity d = let
     0 -> EvenAndOdd
     _ -> error "no solutions because of puzzle parity"
 
-exploitDoorParity :: SolvingData -> Maybe DoorStatus
-exploitDoorParity d = exploitDoorParity' (puzzleParity d) (doorStatus d) where
+_exploitDoorParity :: SolvingData -> Maybe DoorStatus
+_exploitDoorParity d = exploitDoorParity' (_puzzleParity d) (doorStatus d) where
   ev = evenCoords ((size . puzzle) d)
   od = oddCoords ((size . puzzle) d)
   exploitDoorParity' BothOdd ds = updateDoors od ds
@@ -227,6 +222,7 @@ withoutEdge d (e1,e2) = d { _graph = map deleteEdge (_graph d) } where
 
 ----------------------------------------------------------------------- it's show time!
 
+{-# OPTIONS_GHC -fno-warn-orphan-instance #-} -- This is actually a file-wide flag. There are only file-wide flags :(
 instance Show Puzzle where
   show puz = asciiArt (buildInitialData puz)
 
@@ -235,7 +231,7 @@ instance Show SolvingData where
     (intercalate " " $ map (\(n,ns) -> show n ++ show ns) (graph d)) ++
     "\n" ++ (show . length . allNodes . graph) d ++ " nodes, " ++
     (show . length . concat . map snd . graph) d ++ " edges, doors=" ++
-    show (doorStatus d) ++ " | wormholes=" ++ showList (paths d)
+    show (doorStatus d) ++ " | paths=" ++ showList (paths d)
     where showList = init . tail . show -- trim [ and ]
 
 asciiArt :: SolvingData -> String

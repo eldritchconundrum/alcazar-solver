@@ -1,9 +1,23 @@
 module TestData where
 import Puzzle
 
+allPuzzles = [
+  --noSolutionPuz,
+  multipleSolutionPuz,
+  smallestPuz, threeSquaresPuz, trivialPuz, simpleAsymmetricPuz, zorro1Puz, zorro2Puz,
+  provablyUselessDoorPuz, fourPuz, my4x4Puz, fivePuz,
+  sixPuz,
+  transposePuzzle (multiple4x4Rooms 2), transposePuzzle (multiple4x4Rooms 4), multiple4x4Rooms 6,
+  transposePuzzle (multiple4x4RoomsWithDoors 2), transposePuzzle (multiple4x4RoomsWithDoors 4),
+  multiple4x4RoomsWithDoors 6,
+  jsPuz, daily6x9Puz, sixRoomsPuz, excellentHandMadePuz, book10x15Puz, hardBook10x15Puz,
+  valentinePuz, daily7x10Puz, manyDoors, dailyOther7x10, daily5x8, mars4Puz,
+  unitTestReduce3RemoveEdges,
+  feb13, mar14, mar17
+  ]
+
 noSolutionPuz = buildPuzzle (2,2) [(1,0),(1,1)] [(1,0)] [(0,1)]
 multipleSolutionPuz = buildPuzzle (3,3) [(0,0),(2,2)] [] []
-
 
 instantaneousPuzzles = [smallestPuz, threeSquaresPuz, trivialPuz, simpleAsymmetricPuz, zorro1Puz, zorro2Puz,
                         provablyUselessDoorPuz, fourPuz, my4x4Puz, fivePuz
@@ -86,9 +100,6 @@ mars4Puz = buildPuzzle (7,10) [(0,0),(4,0),(5,0),(6,1),(0,2),(6,3),(0,4),(6,5),(
            [(3,1),(3,4),(4,3),(0,5),(5,5),(4,7)]
            [(1,2),(1,4),(4,3),(3,4),(1,7),(1,8),(4,8)]
 
--- "1 13".split.map(&:to_i).each_slice(2) { |n,m| print "(#{n},#{m})," }; puts; puts
-
-
 unitTestReduce3RemoveEdges = buildPuzzle (16,16) [(0,1),(15,7)] [] $
                              [(x,y) | x <- [1,3..13], y <- [2..14]] ++
                              [(x,y) | x <- [1,3..13], y <- if x `mod` 4 == 1 then [0,1] else [15]]
@@ -96,7 +107,19 @@ unitTestReduce3RemoveEdges = buildPuzzle (16,16) [(0,1),(15,7)] [] $
 feb13 = buildPuzzle (7,10) (concat [[(0,i),(i,0),(6,i)] | i <- [1,3,5]] ++ [(0,7),(6,7),(0,9),(2,9),(5,9)])
         [(3,1),(4,1),(5,2),(6,2),(2,5),(3,5)] [(4,2),(1,3),(2,3),(2,5),(2,6),(2,7),(1,8),(1,9),(4,7)]
 
+mar14 = buildPuzzle (7,10) [(0,0),(2,0),(4,0),(0,2),(0,4),(0,6),(0,8),(1,9),(3,9),(5,9),(6,8),(6,5),(6,3)]
+        [(0,3),(0,5),(2,3),(4,0),(4,2),(6,6)] [(0,8),(1,1),(1,7),(2,2),(2,8),(3,6),(4,1),(4,3)]
+
+mar17 = buildPuzzle (7,10) [(0,0),(1,0),(2,0),(3,0),(4,0),(5,0),(6,1),(6,3),(6,4),(6,5),(6,6),(6,8),(5,9),(3,9),(1,9),(0,8),(0,7),(0,5),(0,3),(0,2),(0,1)]
+        [(2,1),(1,2),(3,5),(0,6),(1,6),(5,5),(6,5),(6,7),(4,7),(2,7)] [(1,2),(4,2),(1,4),(3,5),(1,6)]
+
+-- size doors wallsDown wallsRight
+-- "1 13".split.map(&:to_i).each_slice(2) { |n,m| print "(#{n},#{m})," }; puts; puts
+
+
 {-
+
+http://edderiofer.blogspot.fr/2014/11/parity-in-alcazar-and-other-such-loop.html
 
 https://github.com/sjb3d/alcazam
 +   +---+   +---+---+---+---+---+---+   +

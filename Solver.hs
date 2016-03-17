@@ -9,12 +9,31 @@ import Doors
 import Strategy
 
 bruteForce :: SolvingData -> [[Node]]
-bruteForce d = map (expandPaths (paths d)) $ cleanUpSolutions $ bruteForceImpl d where
+bruteForce d = map (_expandPaths (paths d)) $ cleanUpSolutions $ _bruteForceImpl d where
   cleanUpSolutions :: Ord a => [[a]] -> [[a]]
   cleanUpSolutions paths = nub [if first path < last path then path else reverse path | path <- paths]
 
-bruteForceImpl :: SolvingData -> [[Node]]
-bruteForceImpl d = concat [dfs d2 [d1] d1 ((delete d1 . allNodes . graph) d) compiledPaths
+-- replace in nodeList every consecutive [start,end] of a path by the full path. start must be followed by end. all paths must be used.
+--expandPaths [[7,6,3],[4,5,2,1,0],[12,13,14]] [0,4,9,3,7,8,12,14,19] == [0,1,2,5,4,9,3,6,7,8,12,13,14,19]
+_expandPaths :: [Path] -> [Node] -> [Node]
+_expandPaths ps nodeList = let
+  findOrientedPath :: Node -> [Path] -> Maybe Path
+  findOrientedPath n (w:ws)
+    | n == f    = Just w
+    | n == l    = Just (reverse w)
+    | otherwise = findOrientedPath n ws
+    where (f,l) = bothEnds w
+  expandPath [] [] = []
+  expandPath _ [] = error "unused path!?"
+  expandPath ps (n:ns) = case findOrientedPath n ps of
+    Nothing -> n : expandPath ps ns
+    Just p -> if last p /= first ns
+              then error "path half-followed"
+              else p ++ expandPath (delete p ps) (tail ns)
+  in expandPath ps nodeList
+
+_bruteForceImpl :: SolvingData -> [[Node]]
+_bruteForceImpl d = concat [dfs d2 [d1] d1 ((delete d1 . allNodes . graph) d) compiledPaths
                        | (d1,d2) <- doorPairs (doorStatus d)] where
   compiledPaths :: [(Node,Node)]
   compiledPaths = map bothEnds (paths d)
@@ -192,5 +211,5 @@ doesNotHaveEnoughNeighbors ds (n,ns) = case () of
   _ -> length ns < 2 -- si un noeud qui n'est pas une porte a - de 2 voisins (usuellement déjà réduit par reduceGraph3)
 
 hasOnlyTwoNeighborsThatAreTheEndsOfASinglePath ws (n,ns) = any (setEqual ns) $ map bothEnds ws where
-  setEqual (n1:n2:[]) (f,l) = (n1 == f && n2 == l) || (n2 == f && n1 == l)
+  setEqual [n1,n2] (f,l) = (n1 == f && n2 == l) || (n2 == f && n1 == l)
   setEqual _ (f,l) = False -- pas de solution si un noeud a seulement 2 voisins qui sont les extrémités d'un même path

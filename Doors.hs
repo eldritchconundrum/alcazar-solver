@@ -3,7 +3,10 @@ import Data.List
 import Data.Maybe (fromJust, fromMaybe)
 import Utils
 import Puzzle
+import Control.Monad
 
+import Control.Monad.Reader
+import Control.Applicative
 
 -- The nodes of the graph are represented as integers that map to
 -- their coordinates in the rectangle.
@@ -52,9 +55,7 @@ doorPairs (OneDoorFound n ns) = [(n,n2) | n2 <- ns]
 doorPairs (TwoDoorsFound n1 n2) = [(n1,n2)]
 
 setObligatoryDoors :: [Node] -> DoorStatus -> Maybe DoorStatus
-setObligatoryDoors ns ds = foldr f (Just ds) ns where f n Nothing = Nothing
-                                                      f n (Just ds) = setObligatoryDoor n ds
-
+setObligatoryDoors ns ds = foldM (flip Doors.setObligatoryDoor) ds ns
 
 setObligatoryDoor :: Node -> DoorStatus -> Maybe DoorStatus -- Nothing means there is no solution
 setObligatoryDoor n' (NoClueAboutDoors ns) =

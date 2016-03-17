@@ -11,6 +11,7 @@ module Puzzle (
 
 import Data.List
 import Utils
+import Data.Tuple (swap)
 
 -- O--->x
 -- |
@@ -69,4 +70,4 @@ transposePuzzle puz = buildPuzzle
   (swap (size puz))
   (map swap (doors puz))
   (map swap (wallsRight puz))
-  (map swap (wallsDown puz)) where swap (a,b) = (b,a)
+  (map swap (wallsDown puz))
