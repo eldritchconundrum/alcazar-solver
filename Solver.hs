@@ -1,12 +1,24 @@
+
+{-# OPTIONS_GHC
+  -Wall
+  -fno-warn-orphans
+  -fno-warn-name-shadowing
+  -fno-warn-unused-binds
+  -fno-warn-missing-signatures
+  -fno-warn-unused-matches
+  -fno-warn-incomplete-patterns
+#-}
+
 module Solver {-(bruteForce, reduce, Solving(..))-} where
 
 import Data.List
 import Data.Maybe
 import Utils
-import Puzzle
+--import Puzzle
 import Graph
 import Doors
 import Strategy
+import Control.Monad
 
 bruteForce :: SolvingData -> [[Node]]
 bruteForce d = map (_expandPaths (paths d)) $ cleanUpSolutions $ _bruteForceImpl d where
@@ -14,36 +26,34 @@ bruteForce d = map (_expandPaths (paths d)) $ cleanUpSolutions $ _bruteForceImpl
   cleanUpSolutions paths = nub [if first path < last path then path else reverse path | path <- paths]
 
 -- replace in nodeList every consecutive [start,end] of a path by the full path. start must be followed by end. all paths must be used.
---expandPaths [[7,6,3],[4,5,2,1,0],[12,13,14]] [0,4,9,3,7,8,12,14,19] == [0,1,2,5,4,9,3,6,7,8,12,13,14,19]
+-- _expandPaths [[7,6,3],[4,5,2,1,0],[12,13,14]] [0,4,9,3,7,8,12,14,19] == [0,1,2,5,4,9,3,6,7,8,12,13,14,19]
 _expandPaths :: [Path] -> [Node] -> [Node]
-_expandPaths ps nodeList = let
-  findOrientedPath :: Node -> [Path] -> Maybe Path
-  findOrientedPath n (w:ws)
-    | n == f    = Just w
-    | n == l    = Just (reverse w)
-    | otherwise = findOrientedPath n ws
-    where (f,l) = bothEnds w
-  expandPath [] [] = []
-  expandPath _ [] = error "unused path!?"
-  expandPath ps (n:ns) = case findOrientedPath n ps of
-    Nothing -> n : expandPath ps ns
-    Just p -> if last p /= first ns
-              then error "path half-followed"
-              else p ++ expandPath (delete p ps) (tail ns)
-  in expandPath ps nodeList
+_expandPaths [] ns = ns
+_expandPaths ps (n:n':ns) = case _findOrientedPath n ps of
+  Nothing -> n : _expandPaths ps (n':ns)
+  Just p -> if last p /= n'
+            then error "path not followed"
+            else p ++ _expandPaths (delete p . delete (reverse p) $ ps) ns
+_expandPaths ps _ = error $ "unused path!? " ++ show ps
+
+_findOrientedPath :: Node -> [Path] -> Maybe Path
+_findOrientedPath n [] = Nothing
+_findOrientedPath n (w:ws) | n == f    = Just w
+                           | n == l    = Just (reverse w)
+                           | otherwise = _findOrientedPath n ws
+  where (f,l) = bothEnds w
 
 _bruteForceImpl :: SolvingData -> [[Node]]
 _bruteForceImpl d = concat [dfs d2 [d1] d1 ((delete d1 . allNodes . graph) d) compiledPaths
-                       | (d1,d2) <- doorPairs (doorStatus d)] where
-  compiledPaths :: [(Node,Node)]
+                           | (d1,d2) <- doorPairs (doorStatus d)] where
+  compiledPaths :: [Edge]
   compiledPaths = map bothEnds (paths d)
-  findPathAndOtherEnd :: [(Node,Node)] -> Node -> Maybe ((Node,Node), Node)
+  findPathAndOtherEnd :: [Edge] -> Node -> Maybe (Edge, Node)
   findPathAndOtherEnd [] node = Nothing -- it's a little faster to have paths compiled into their (Node,Node) ends
-  findPathAndOtherEnd (p@(f,l):ps) node = case () of
-    _ | node == f -> Just (p,l)
-    _ | node == l -> Just (p,f)
-    _ -> findPathAndOtherEnd ps node
-  dfs :: Node -> [Node] -> Node -> [Node] -> [(Node,Node)] -> [[Node]]
+  findPathAndOtherEnd (p@(f,l):ps) node | node == f = Just (p,l)
+                                        | node == l = Just (p,f)
+                                        | otherwise = findPathAndOtherEnd ps node
+  dfs :: Node -> [Node] -> Node -> [Node] -> [Edge] -> [[Node]]
   dfs exitDoor rpath node [] ps = if exitDoor == node then [reverse rpath] else []
   dfs exitDoor rpath node remaining ps = if exitDoor == node then [] else
     case findPathAndOtherEnd ps node of
@@ -81,8 +91,8 @@ type SearchResult = Solving SolvingData
 
 converge :: (SolvingData -> SearchResult) -> SolvingData -> SearchResult
 converge search d = case search d of
-  Better d -> converge search d
-  d -> d
+  Better d' -> converge search d'
+  d' -> d'
 
 reduceList :: [SolvingData -> SearchResult] -> SolvingData -> SearchResult
 reduceList fs d = reduceList' False fs d where -- preserve whether any of the reductions yielded an improvement
@@ -132,37 +142,41 @@ deduceDoorStatus d = let
 removeEdges :: SolvingData -> SearchResult
 removeEdges d = let
   obligDoors = (obligatoryDoors . doorStatus) d
-  extraEdgesOfObligatoryDoorsInPath = [(n, ns \\ [n'])
-                                      | (n,ns) <- (graph d),
-                                        obligDoors `contains` n,
-                                        n' <- maybeToList (findOtherEnd (paths d) n)]
-  findOtherEnd :: [Path] -> Node -> Maybe Node
-  findOtherEnd [] n = Nothing
-  findOtherEnd (p:ps) n = let (f,l) = bothEnds p in case () of
-    _ | f == n -> Just l
-    _ | l == n -> Just f
-    _ -> findOtherEnd ps n
+  extraEdgesOfObligatoryDoorsInPath = [(n, ns \\ [n']) |
+                                       (n,ns) <- (graph d),
+                                       obligDoors `contains` n,
+                                       n' <- maybeToList (_findOtherEnd n (paths d))]
   reductions = [flip withoutEdge (n,n') | (n,ns) <- extraEdgesOfObligatoryDoorsInPath, n' <- ns]
   in if empty reductions then NotBetter d else Better $ foldr (.) id reductions d
+
+_findOtherEnd :: Node -> [Path] -> Maybe Node
+_findOtherEnd n ps = foldM otherEnd n ps where
+  otherEnd n p | f == n = Just l
+               | l == n = Just f
+               | otherwise = Nothing
+    where (f,l) = bothEnds p
 
 -------------------------------------------------- trouve les paths de longeur 3. rapide.
 
 reduceGraph3 :: SolvingData -> SearchResult
-reduceGraph3 d =
-  let reductions = [(n,ns) | (n,ns) <- graph d, not (possibleDoors (doorStatus d) `contains` n) && length ns == 2]
-      reduce3NodesIntoPath (nw,[n1,n2]) = addPath [n1, nw, n2] d
-  in case map reduce3NodesIntoPath reductions of
-    [] -> NotBetter d
-    (Nothing:_) -> NoSolution
-    ((Just d):_) -> Better d
+reduceGraph3 d = _firstReduction d reductions where
+  reductions = [reduce3NodesIntoPath (n,ns) |
+                (n,ns) <- graph d,
+                not (possibleDoors (doorStatus d) `contains` n) && length ns == 2]
+  reduce3NodesIntoPath (nw,[n1,n2]) = addPath [n1, nw, n2] d
+
+_firstReduction :: SolvingData -> [Maybe SolvingData] -> SearchResult
+_firstReduction d [] = NotBetter d
+_firstReduction d (Nothing:_) = NoSolution
+_firstReduction d ((Just d'):_) = Better d'
 
 -------------------------------------------------- trouve des paths de longeur 2. lent.
 
 turnEdgeIntoPathIfNoSolutionOtherwise :: (SolvingData -> Bool) -> SolvingData -> SearchResult
-turnEdgeIntoPathIfNoSolutionOtherwise isImpossible d = firstReduction reducedGraphs d where
-  reducedGraphs d = [addEdgePath edge d |
-                     edge <- everyNonPathEdge d,
-                     isImpossible (withoutEdge d edge)]
+turnEdgeIntoPathIfNoSolutionOtherwise isImpossible d = _firstReduction d reducedGraphs where
+  reducedGraphs = [addEdgePath edge d |
+                   edge <- everyNonPathEdge d,
+                   isImpossible (withoutEdge d edge)]
   everyNonPathEdge d =
     [(e1,e2) |
      (e1,es) <- graph d,
@@ -170,10 +184,6 @@ turnEdgeIntoPathIfNoSolutionOtherwise isImpossible d = firstReduction reducedGra
      e1 < e2, -- only process one of the two symmetric edges
      not (any (\p -> p `contains` e1 && p `contains` e2) (paths d))]
   addEdgePath (n1,n2) = addPath [n1,n2]
-  firstReduction reductions d = case reductions d of
-    [] -> NotBetter d
-    (Nothing:_) -> NoSolution
-    ((Just d):_) -> Better d
 
 -- Une version plus générale, et bien plus lente, de reduceGraph3.
 -- Si on vient de passer "3*", ça ne trouvera guère que les path qui s'arrêtent à 1 d'une door sans autre edge.

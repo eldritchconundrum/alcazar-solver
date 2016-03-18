@@ -1,3 +1,14 @@
+
+{-# OPTIONS_GHC
+  -Wall
+  -fno-warn-orphans
+  -fno-warn-name-shadowing
+  -fno-warn-unused-binds
+  -fno-warn-missing-signatures
+  -fno-warn-unused-matches
+  -fno-warn-incomplete-patterns
+#-}
+
 module Graph {-( -- This file should be split and renamed  
   Node,nodeToCoords,coordsToNode,
   Path,bothEnds,inside,expandPaths,
@@ -11,11 +22,10 @@ module Graph {-( -- This file should be split and renamed
   )-} where
 
 import Data.List
-import Data.Maybe (fromJust, fromMaybe, mapMaybe)
+import Data.Maybe
 import Utils
 import Puzzle
 import Doors
-
 
 -- This type represents an obligatory path, one that has to be part of any possible solution.
 type Path = [Node]
@@ -64,20 +74,6 @@ allNodes g = map fst g
 
 neighbors :: Graph -> Node -> [Node]
 neighbors g node = fromMaybe [] $ lookup node g
-
-updateGraphForNewPath_old :: Path -> Graph -> Graph
-updateGraphForNewPath_old w adjs = update adjs where
-  (np1, np2) = bothEnds w
-  nodesToDelete = inside w
-  update [] = []
-  -- delete nodes that are inside the path
-  update ((n,ns):as) | nodesToDelete `contains` n = update as
-  -- replace the edges between an endpoint and a deleted node by a link to the other endpoint
-  update ((n,ns):as) | n == np1 = (n,replaceItems nodesToDelete np2 ns) : update as
-  update ((n,ns):as) | n == np2 = (n,replaceItems nodesToDelete np1 ns) : update as
-  -- delete edges between path endpoints and deleted nodes
-  update ((n,ns):as) = (n, ns \\ nodesToDelete) : update as
-  replaceItems olds new = nub . map replace where replace x = if olds `contains` x then new else x
 
 updateGraphForNewPath :: Path -> Graph -> Graph
 updateGraphForNewPath ps = mapMaybe update where
@@ -188,7 +184,7 @@ _exploitDoorParity d = exploitDoorParity' (_puzzleParity d) (doorStatus d) where
     if (od n1 && ev n2) || (ev n1 && od n2) then Just ds else Nothing
 
 
------------------------------------------------------------------------ graph reduction by adding/merging a path
+------------------------------------------------------------------------ graph reduction by adding/merging a path
 
 {-
 
@@ -211,8 +207,7 @@ addPath ns d =
                                _graph = newGraph,
                                _doorStatus = ds }
 
-
-withoutEdge :: SolvingData -> (Node,Node) -> SolvingData
+withoutEdge :: SolvingData -> Edge -> SolvingData
 withoutEdge d (e1,e2) = d { _graph = map deleteEdge (_graph d) } where
   deleteEdge :: (Node, [Node]) -> (Node, [Node])
   deleteEdge (e,es) | e == e1 = (e, delete e2 es)
@@ -222,7 +217,6 @@ withoutEdge d (e1,e2) = d { _graph = map deleteEdge (_graph d) } where
 
 ----------------------------------------------------------------------- it's show time!
 
-{-# OPTIONS_GHC -fno-warn-orphan-instance #-} -- This is actually a file-wide flag. There are only file-wide flags :(
 instance Show Puzzle where
   show puz = asciiArt (buildInitialData puz)
 
@@ -252,18 +246,17 @@ asciiArt' d ps = (unlines . map concat) cellMatrix where
   cellMatrix = [[showCell xx yy | xx <- [0..2*width]] | yy <- [0..2*height]]
   -- each cell is displayed on two chars
   showCell :: Int -> Int -> String
-  showCell xx yy = let (x,y) = (xx `div` 2, yy `div` 2) in case () of
-    _ | odd xx && odd yy -> showNodeCell x y -- node
-    _ | even xx && even yy -> showConnectorCell x y -- connector between separators
-    _ | even xx && odd yy -> showSeparatorCell (x-1,y) (x,y) -- vertical separator
-    _ | odd xx && even yy -> showSeparatorCell (x,y-1) (x,y) -- horizontal separator
+  showCell xx yy | odd xx && odd yy = showNodeCell x y -- node
+                 | even xx && even yy = showConnectorCell x y -- connector between separators
+                 | even xx && odd yy = showSeparatorCell (x-1,y) (x,y) -- vertical separator
+                 | odd xx && even yy = showSeparatorCell (x,y-1) (x,y) -- horizontal separator
+    where (x,y) = (xx `div` 2, yy `div` 2)
   showNodeCell :: Int -> Int -> String
-  showNodeCell x y = case () of
-    _ | cToN (x,y) `elem` obligatoryDoors (doorStatus d) -> obligatoryDoorCell
-    _ | cToN (x,y) `elem` possibleDoors (doorStatus d) -> if even (x+y) then possibleDoorCell1 else possibleDoorCell2
-    _ | any (`contains` cToN (x,y)) ps  -> pathCell
-    _ | not (allNodes (graph d) `contains` cToN (x,y)) -> filledCell -- not in the graph, show fully filled
-    _ -> emptyCell
+  showNodeCell x y | cToN (x,y) `elem` obligatoryDoors (doorStatus d) = obligatoryDoorCell
+                   | cToN (x,y) `elem` possibleDoors (doorStatus d) = if even (x+y) then possibleDoorCell1 else possibleDoorCell2
+                   | any (`contains` cToN (x,y)) ps = pathCell
+                   | not (allNodes (graph d) `contains` cToN (x,y)) = filledCell -- not in the graph, show fully filled
+                   | otherwise = emptyCell
   showConnectorCell x y = filledCell
   showSeparatorCell c1 c2 =
     if not $ all (validCoords sz) [c1,c2] then filledCell else -- border walls

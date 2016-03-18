@@ -31,8 +31,8 @@ tests = do
 m = main
 main = do
   timeAll defaultStrategy
-  --tests
-  --mapM_ (solveAndPrint "3*") instantaneousPuzzles
+  tests
+  mapM_ (solveAndPrint "3*") instantaneousPuzzles
   --printReduced "3*eb*3*2*" feb13
   --printReduced "3*d3*23*23*23*23*" valentinePuz --solveAndPrint "3*d3*" valentinePuz
   --printReduced "3*d3*b*e3*b*23*23*23*" daily6x9Puz -- solveAndPrint "3*d3*b*e3*b*" daily6x9Puz -- js: 23m
