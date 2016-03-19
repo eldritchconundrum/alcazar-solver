@@ -10,9 +10,7 @@
 #-}
 
 module Graph {-( -- This file should be split and renamed  
-  Node,nodeToCoords,coordsToNode,
   Path,bothEnds,inside,expandPaths,
-  DoorStatus,obligatoryDoors,possibleDoors,doorPairs,updateDoors,
   Graph,
   allNodes,neighbors,
   SolvingData(), -- hide the constructor
@@ -129,7 +127,7 @@ buildInitialData puz = let
   in SolvingData { _puzzle = puz,
                    _graph = Graph (trimIsolatedNodes [(cToN (x,y), map cToN $ neighborsOf puz (x,y))
                                                      | y <- [0..h-1], x <- [0..w-1]]),
-                   _doorStatus = NoClueAboutDoors $ map cToN (doors puz),
+                   _doorStatus = initialDoorStatus $ map cToN (doors puz),
                    _paths = [] }
 
 neighborsOf :: Puzzle -> Coords -> [Coords]
@@ -147,9 +145,10 @@ neighborsOf puz (x,y) = let (w,h) = size puz in
 -- TODO: find a better name 
 start :: Puzzle -> SolvingData
 start puz = let d = buildInitialData puz
-            in d { _doorStatus = fromMaybe (error "no solutions because of doors parity") (_exploitDoorParity d) }
+            in d { _doorStatus = fromMaybe (error "no solutions because of doors parity")
+                                 (exploitPuzzleParity (puzzleSize d) (_puzzleParity d) (possibleDoors (doorStatus d))) }
 
-_puzzleParity :: SolvingData -> Parity
+_puzzleParity :: SolvingData -> DoorParity
 _puzzleParity d = let
   ns = allNodes (graph d)
   ev = evenCoords (puzzleSize d)
@@ -159,29 +158,6 @@ _puzzleParity d = let
     -1 -> BothEven
     0 -> EvenAndOdd
     _ -> error "no solutions because of puzzle parity"
-
-_exploitDoorParity :: SolvingData -> Maybe DoorStatus
-_exploitDoorParity d = exploitDoorParity' (_puzzleParity d) (doorStatus d) where
-  ev = evenCoords (puzzleSize d)
-  od = oddCoords (puzzleSize d)
-  exploitDoorParity' BothOdd ds = updateDoors od ds
-  exploitDoorParity' BothEven ds = updateDoors ev ds
-  exploitDoorParity' EvenAndOdd ds@(NoClueAboutDoors ns) = let
-    (odDoors, evDoors) = (filter od ns, filter ev ns)
-    in updateDoors (const True) (TwoSetsOfDoorsOneInEach odDoors evDoors)
-  exploitDoorParity' EvenAndOdd (TwoSetsOfDoorsOneInEach ns1 ns2) =
-    -- TwoSetsOfDoorsOneInEach n'est possible qu'en tant que résultat de exploitDoorParity sur un NoClueAboutDoors.
-    -- Comme il n'y a pas d'intérêt à appeler exploitDoorParity plusieurs fois, ce cas est impossible.
-    error "exploitDoorParity on TwoSetsOfDoorsOneInEach should not happen"
-    -- (ça tombe bien parce qu'il avait l'air compliqué)
-  exploitDoorParity' EvenAndOdd (OneDoorFound n ns) = let
-    keep = if od n then ev else od
-    in case filter keep ns of
-      [] -> Nothing
-      [n2] -> Just $ TwoDoorsFound n n2
-      ns' -> Just $ OneDoorFound n ns'
-  exploitDoorParity' EvenAndOdd ds@(TwoDoorsFound n1 n2) =
-    if (od n1 && ev n2) || (ev n1 && od n2) then Just ds else Nothing
 
 
 ------------------------------------------------------------------------ graph reduction by adding/merging a path

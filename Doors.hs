@@ -1,12 +1,14 @@
-module Doors where
+module Doors (
+  Node, nodeToCoords, coordsToNode,
+  DoorStatus(),
+  initialDoorStatus,obligatoryDoors,possibleDoors,doorPairs,setObligatoryDoors,updateDoors,exploitPuzzleParity,
+  DoorParity(..),evenCoords,oddCoords,
+  ) where
 import Data.List
 import Data.Maybe (fromJust, fromMaybe)
 import Utils
 import Puzzle
 import Control.Monad
-
-import Control.Monad.Reader
-import Control.Applicative
 
 -- The nodes of the graph are represented as integers that map to
 -- their coordinates in the rectangle.
@@ -25,80 +27,62 @@ coordsToNode (width, _) (x, y) = x + width * y
 
 
 -- This type represents what we know about the doors in the solution.
-data DoorStatus = NoClueAboutDoors [Node]  -- list has more than 1 item
-                | TwoSetsOfDoorsOneInEach [Node] [Node] -- lists have more than 1 item
-                | OneDoorFound Node [Node] -- list has more than 1 item
-                | TwoDoorsFound Node Node deriving Eq
+data DoorStatus = DoorStatus [Node] [Node] deriving Eq -- lists should be non-empty
 
 instance Show DoorStatus where
-  show (NoClueAboutDoors ns) = show ns
-  show (TwoSetsOfDoorsOneInEach ns1 ns2) = show ns1 ++ "-" ++ show ns2
-  show (OneDoorFound n ns) = show n ++ "-" ++ show ns
-  show (TwoDoorsFound n1 n2) = show n1 ++ "-" ++ show n2
+  show (DoorStatus ns1 ns2) | ns1 == ns2 = show ns1
+  show (DoorStatus ns1 ns2) = show2 ns1 ++ "-" ++ show2 ns2 where
+    show2 [n] = show n
+    show2 ns = show ns
+
+initialDoorStatus ns = DoorStatus ns ns
 
 obligatoryDoors :: DoorStatus -> [Node]
-obligatoryDoors (NoClueAboutDoors ns) = []
-obligatoryDoors (TwoSetsOfDoorsOneInEach ns1 ns2) = []
-obligatoryDoors (OneDoorFound n ns) = [n]
-obligatoryDoors (TwoDoorsFound n1 n2) = [n1,n2]
+obligatoryDoors (DoorStatus ns1 ns2) = o ns1 ++ o ns2 where o [n] = [n]
+                                                            o ns  = []
 
 possibleDoors :: DoorStatus -> [Node]
-possibleDoors (NoClueAboutDoors ns) = ns
-possibleDoors (TwoSetsOfDoorsOneInEach ns1 ns2) = ns1 ++ ns2
-possibleDoors (OneDoorFound n ns) = n : ns
-possibleDoors (TwoDoorsFound n1 n2) = [n1,n2]
+possibleDoors (DoorStatus ns1 ns2) = nub (ns1 ++ ns2)
 
 doorPairs :: DoorStatus -> [(Node, Node)]
-doorPairs (NoClueAboutDoors ns) = [(n1,n2) | n1 <- ns, n2 <- ns]
-doorPairs (TwoSetsOfDoorsOneInEach ns1 ns2) = [(n1,n2) | n1 <- ns1, n2 <- ns2]
-doorPairs (OneDoorFound n ns) = [(n,n2) | n2 <- ns]
-doorPairs (TwoDoorsFound n1 n2) = [(n1,n2)]
+doorPairs (DoorStatus ns1 ns2) = [(n1,n2) | n1 <- ns1, n2 <- ns2, n1 /= n2]
 
-setObligatoryDoors :: [Node] -> DoorStatus -> Maybe DoorStatus
-setObligatoryDoors ns ds = foldM (flip Doors.setObligatoryDoor) ds ns
-
-setObligatoryDoor :: Node -> DoorStatus -> Maybe DoorStatus -- Nothing means there is no solution
-setObligatoryDoor n' (NoClueAboutDoors ns) =
-  if ns `contains` n'
-  then Just $ OneDoorFound n' (delete n' ns)
-  else Nothing
-setObligatoryDoor n' (TwoSetsOfDoorsOneInEach ns1 ns2) = case (ns1 `contains` n', ns2 `contains` n') of
-  (True, True) ->  Just $ OneDoorFound n' (delete n' (ns1 ++ ns2)) -- à voir, ce cas n'est pas possible ? pas d'intersection entre les deux si c'est issu de la parité... la signification de TwoSetsOfDoorsOneInEach est à préciser 
-  (True, False) -> Just $ OneDoorFound n' ns2
-  (False, True) -> Just $ OneDoorFound n' ns1
-  (False, False) -> Nothing
-setObligatoryDoor n' ds@(OneDoorFound n ns) =
-  if n == n' then Just ds
-  else if ns `contains` n' then Just $ TwoDoorsFound n n'
-       else Nothing
-setObligatoryDoor n' ds@(TwoDoorsFound n1 n2) = if n1 == n' || n2 == n' then Just ds else Nothing
-
+setObligatoryDoors :: [Node] -> DoorStatus -> Maybe DoorStatus -- Nothing means there is no solution
+setObligatoryDoors ns ds = foldM setObligatoryDoor ds ns where
+  setObligatoryDoor :: DoorStatus -> Node -> Maybe DoorStatus
+  setObligatoryDoor ds@(DoorStatus [n1] [n2]) n' = if n1 == n' || n2 == n' then Just ds else Nothing
+  setObligatoryDoor ds@(DoorStatus [n] ns) n' = oneDoorKnown n' n ns ds
+  setObligatoryDoor ds@(DoorStatus ns [n]) n' = oneDoorKnown n' n ns ds
+  setObligatoryDoor (DoorStatus ns1 ns2) n' = case (ns1 `contains` n', ns2 `contains` n') of
+    (True, True) ->  Just $ DoorStatus [n'] (delete n' $ nub (ns1 ++ ns2))
+    (True, False) -> Just $ DoorStatus [n'] ns2
+    (False, True) -> Just $ DoorStatus [n'] ns1
+    (False, False) -> Nothing
+  oneDoorKnown n' n ns ds =
+    if n == n' then Just ds
+    else if ns `contains` n' then Just $ DoorStatus [n] [n']
+         else Nothing
 
 updateDoors :: (Node -> Bool) -> DoorStatus -> Maybe DoorStatus -- Nothing means there is no solution
-updateDoors keepCond (NoClueAboutDoors ns) = case filter keepCond ns of
-  [] -> Nothing
-  [n] -> Nothing
-  [n1,n2] -> Just $ TwoDoorsFound n1 n2
-  ns' -> Just $ NoClueAboutDoors ns'
-updateDoors keepCond (TwoSetsOfDoorsOneInEach ns1 ns2) = case (filter keepCond ns1, filter keepCond ns2) of
-  ([], _) -> Nothing
-  (_, []) -> Nothing
-  ([n1], [n2]) -> Just $ TwoDoorsFound n1 n2
-  ([n1], ns2) -> Just $ OneDoorFound n1 ns2
-  (ns1, [n2]) -> Just $ OneDoorFound n2 ns1
-  (ns1, ns2) -> Just $ TwoSetsOfDoorsOneInEach ns1 ns2
-updateDoors keepCond (OneDoorFound n ns) = if not (keepCond n) then Nothing else case filter keepCond ns of
-  [] -> Nothing
-  [n2] -> Just $ TwoDoorsFound n n2
-  ns' -> Just $ OneDoorFound n ns'
-updateDoors keepCond (TwoDoorsFound n1 n2) = if keepCond n1 && keepCond n2 then Just $ TwoDoorsFound n1 n2 else Nothing
+updateDoors keepCond (DoorStatus ns1 ns2) = if length ns1' * length ns2' == 0
+                                            then Nothing
+                                            else Just (DoorStatus ns1' ns2')
+  where ns1' = filter keepCond ns1
+        ns2' = filter keepCond ns2
 
-
-data Parity = EvenAndOdd
-            | BothEven
-            | BothOdd deriving Show
+-- Parity of the doors of a puzzle
+data DoorParity = EvenAndOdd
+                | BothEven
+                | BothOdd deriving Show
 
 evenCoords :: Size -> Node -> Bool
 evenCoords sz n = let (x,y) = nodeToCoords sz n in even (x + y)
 oddCoords :: Size -> Node -> Bool
 oddCoords sz n = let (x,y) = nodeToCoords sz n in odd (x + y)
+
+exploitPuzzleParity :: Size -> DoorParity -> [Node] -> Maybe DoorStatus
+exploitPuzzleParity sz BothOdd ns = updateDoors (oddCoords sz) (DoorStatus ns ns)
+exploitPuzzleParity sz BothEven ns = updateDoors (evenCoords sz) (DoorStatus ns ns)
+exploitPuzzleParity sz EvenAndOdd ns = updateDoors (const True) (DoorStatus odDoors evDoors) where
+  odDoors = filter (oddCoords sz) ns
+  evDoors = filter (evenCoords sz) ns
