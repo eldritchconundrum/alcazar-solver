@@ -33,24 +33,24 @@ bothEnds p = (first p, last p)
 inside = init . tail
 
 updatePaths :: [Node] -> [Path] -> [Path]
-updatePaths [n1,n2] ws = _updatePaths2 n1 n2 ws
-updatePaths [n1,nw,n2] ws = _updatePaths3 n1 nw n2 ws
+updatePaths [n1,n2] ps = _updatePaths2 n1 n2 ps
+updatePaths [n1,nw,n2] ps = _updatePaths3 n1 nw n2 ps
 updatePaths _ _ = error "can I haz implematoin kthx"  
 
 _updatePaths2 :: Node -> Node -> [Path] -> [Path]
-_updatePaths2 n1 n2 ws =
-  let (atMostTwoPaths, otherWs) = partition (\w -> let (f,l) = bothEnds w in length (nub [f, l, n1, n2]) < 4) ws
+_updatePaths2 n1 n2 ps =
+  let (atMostTwoPaths, otherPaths) = partition (\p -> let (f,l) = bothEnds p in length (nub [f, l, n1, n2]) < 4) ps
       -- among [pre,sep,post], at most two of them will match the (at most two) paths
       -- we only have to find who's where, and reverse and init/tail the paths to avoid duplicate n1/n2
       pathsWithReverse = atMostTwoPaths ++ map reverse atMostTwoPaths
       before = maybe [] init $ find ((\(f,l) -> f /= n2 && l == n1) . bothEnds) pathsWithReverse
       sep = maybe [] inside $ find ((\(f,l) -> f == n1 && l == n2) . bothEnds) pathsWithReverse
       after = maybe [] tail $ find ((\(f,l) -> f == n2 && l /= n1) . bothEnds) pathsWithReverse
-  in (before ++ [n1] ++ sep ++ [n2] ++ after) : otherWs
+  in (before ++ [n1] ++ sep ++ [n2] ++ after) : otherPaths
 
 _updatePaths3 :: Node -> Node -> Node -> [Path] -> [Path]
-_updatePaths3 n1 nw n2 ws = -- [n1,nw,n2] are distinct, (flatten ws) too.
-  let (atMostTwoPaths, otherWs) = partition (\w -> let (f,l) = bothEnds w in length (nub [f, l, n1, n2]) < 4) ws
+_updatePaths3 n1 nw n2 ps = -- [n1,nw,n2] are distinct, (flatten ws) too.
+  let (atMostTwoPaths, otherPaths) = partition (\p -> let (f,l) = bothEnds p in length (nub [f, l, n1, n2]) < 4) ps
       -- among [pre,sep1,sep2,post], at most two of them will match the (at most two) paths
       -- we only have to find who's where, and reverse and init/tail the paths to avoid duplicate n1/n2
       pathsWithReverse = atMostTwoPaths ++ map reverse atMostTwoPaths
@@ -58,7 +58,7 @@ _updatePaths3 n1 nw n2 ws = -- [n1,nw,n2] are distinct, (flatten ws) too.
       sep1 = maybe [] inside $ find ((\(f,l) -> f == n1 && l == nw) . bothEnds) pathsWithReverse
       sep2 = maybe [] inside $ find ((\(f,l) -> f == nw && l == n2) . bothEnds) pathsWithReverse
       after_ = maybe [] tail $ find ((\(f,l) -> f == n2 && l /= nw) . bothEnds) pathsWithReverse
-  in (before ++ [n1] ++ sep1 ++ [nw] ++ sep2 ++ [n2] ++ after_) : otherWs
+  in (before ++ [n1] ++ sep1 ++ [nw] ++ sep2 ++ [n2] ++ after_) : otherPaths
 -- updatePaths3 1 2 3 [[1,0,2]] == [1,0,2,3]
 -- updatePaths3 5 4 6 [[4,3,6],[0,1,2,5]] == [[0,1,2,5,4,3,6]] car 5 disparaît du graphe mais pas 6.
 
