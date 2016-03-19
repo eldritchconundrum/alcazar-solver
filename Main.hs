@@ -30,7 +30,7 @@ tests = do
 
 m = main
 main = do
-  timeAll defaultStrategy
+  --timeAll defaultStrategy
   tests
   --mapM_ (solveAndPrint "3*") instantaneousPuzzles
   --printReduced "3*eb*3*2*" feb13
@@ -67,9 +67,8 @@ timeAll strat = timeIO "reduce all" $ sequence_ $ map (printReduced strat) allPu
 --defaultStrategy = "(((3*bel)*2)*d)*" -- 1.46, 19.8
 --defaultStrategy = "((((3*2)*el)*d)*b)*" -- 1.44, 8.0
 defaultStrategy = "(((3*2)*eld)*b)*" -- 1.44, 8.0
--- si '2' n'a rien trouvé, 'l' ne trouvera rien
 
--- "((((3*2)*eld)*b)*X)*"
+-- "((((3*2)*eld)*b)*X²)*"
 
 
 makeMoreDifficult puz = mapM_ try (moreDifficult puz) where -- by keeping it reducable by defaultStrategy
@@ -86,7 +85,9 @@ makeMoreDifficult puz = mapM_ try (moreDifficult puz) where -- by keeping it red
 
 
 
-{- réductions et résolutions
+{-
+
+Réductions et résolutions :
 
 Pour l'instant j'ai un bruteforce, mais avant de l'exécuter je
 simplifie le problème en déduisant des faits de la même manière que je
@@ -96,60 +97,47 @@ associée.
 3 : localisation des paths de longueur 3 (réduction des noeuds sans
 porte avec seulement deux voisins). Immédiat.
 
-b : localisation des paths de longueur 2 (aka "bouncing" : quand le
-problème devient prouvablement impossible en enlevant un
-edge). Paramétrable par le type de recherche d'impossibilité. Rendrait
-obsolète la précédente via join, si elle n'était pas bien plus lente.
+b : localisation des paths de longueur 2 (aka "bouncing" : quand en enlevant un edge, le
+problème devient prouvablement impossible car un noeud n'aurait plus comme voisins que les endpoints d'un même path).
 
 automatique en début :
 exploitation de la parité : sur quels (x+y)`mod`2 sont les doors ?
 (une fois, au début, dans puzzle, pas dans graph)
 
+e : les portes qui ont déjà un path n'ont pas besoin d'autres edges.
+d : un noeud avec plus qu'un voisin doit être une porte.
+l : si sans un edge, un noeud n'a plus assez de voisin pour que ce soit finissable, alors c'est un path.
+2 : pareil que 'l' mais on réduit par 3* avant de tester.
 
--- "l" est strictement moins fort que 2.
--- "d" et "e" sont rarement utiles (mais peut-être plus rapides que 2 parfois ?).
--- avec (3*2)* on va très loin, mais parfois il faut les autres pour finir.
+"l" est strictement moins fort que 2.
+"d" et "e" sont rarement utiles (mais peut-être plus rapides que 2 parfois ?).
 
-TODO: si "le graphe sans une door" est impossible, alors cette door devient obligatoire
 
 TODO: réduction "réduction sur toutes les doorPairs, élimination de ceux qui conduisent à des impossibilités, et récupération de l'intersection des paths/reducs trouvés partout"
 
-TODO: graphe "prouvablement impossible" si >1 composantes fortement connexes
-
-TODO: tenter de découper le graphe en deux "zones" de superficie pas trop inégale qui ne communiquent que via 1 ou 2 bottlenecks, résoudre/simplifier les sous-graphes, puis combiner ça
-
-TODO: si deux sous-graphes ne sont connectés que par un seul edge,
-alors il y a une door oblig de chaque côté
-
-TODO: voir quels puzzles ne sont pas résolus sans bruteForce ou réduits trop lentement
-
--}
-
-
-{- TODOs
-
-TODO: prendre en param la stratégie, la tester sur tous les problèmes, et mesurer la meilleure.
-TODO: trouver des problèmes plus difficiles/grands, qui résistent à defaultStrategy. combiner des existants ?
-
-l'idée de stratégie en tant que DSL n'est pas une utilisation extraordinairement adaptée d'un DSL, vu qu'on est presque seulement intéressé par ce qui est de la forme (((A*B)*C)*. Mais ça offre aussi la possibilité d'afficher les réductions qui ont été réalisées sous forme visualisable simplement. TODO: le faire
-
-A TESTER : que deviens le code si on représente les doors potentielles comme étant connectées dans le graphe à un même fake node invisible ? plus simple ?
-
-backtracking : l'intégrer au reste du moteur quand on ne sait plus réduire, au lieu d'être une alternative séparée comme actuellement.
-
--- idée : gérer les invalidations de parties de graphe, pour ne pas essayer toujours les mêmes réductions qui ne marchent toujours pas
-
-TODO: avant je pouvais écrire """reduce $ addWormhole2 (29,33) $ addWormhole2 (13,17) $ reduce (graphOf (multiple4x4RoomsWithDoors 4))""", voir comment faire maintenant
-
-TODO: un éditeur de niveaux pour écrire des tests plus facilement. dans mes rêves.
-
-TODO: tester Control.Concurrent.compete pour le fun
-
+TODO: composantes fortement connexes. Si > 1, pas de solution.
+--> si deux sous-graphes ne sont connectés que par un seul edge, alors il y a une door oblig de chaque côté (test : multiple4x4RoomsWithDoors)
 trouver s'il existe un moyen plus efficace que le moyen naïf de savoir
 quels edges d'un graphe conduiraient à > 1 composantes connexes s'ils
 étaient enlevés ?
   hmm c'est quoi le moyen naïf déjà ? O(n^?) ?
   trouver d'abord les cycles, puis essayer les edges pas entre deux noeuds d'un cycle ?
+
+TODO: tenter de découper le graphe en deux "zones" de superficie pas trop inégale qui ne communiquent que via 1 ou 2 bottlenecks, résoudre/simplifier les sous-graphes, puis combiner ça
+
+
+TODO: Voir quels puzzles ne sont pas résolus sans bruteForce ou réduits trop lentement.
+Trouver des problèmes plus difficiles/grands, qui résistent à defaultStrategy. combiner des existants ?
+
+l'idée de stratégie en tant que DSL n'est pas une utilisation extraordinairement adaptée d'un DSL, vu qu'on est presque seulement intéressé par ce qui est de la forme (((A*B)*C)*. Mais ça offre aussi la possibilité d'afficher les réductions qui ont été réalisées sous forme visualisable simplement. TODO: le faire
+
+A TESTER : que deviens le code si on représente les doors potentielles comme étant connectées dans le graphe à un même fake node invisible ? plus simple ? ça unifie probablement certaines réductions.
+
+backtracking : l'intégrer au reste du moteur quand on ne sait plus réduire, au lieu d'être une alternative séparée comme actuellement.
+
+TODO: un éditeur de niveaux pour écrire des tests plus facilement. dans mes rêves.
+
+TODO: tester Control.Concurrent.compete pour le fun
 
 TO NOT DO: profiling, changer les structures de données en Array ou
 autre, voir si c'est plus performant... ne pas faire ça parce que 1)

@@ -129,7 +129,7 @@ reduceStrategy strat d = executeStrategy (parseStrategy strat) d where
 
 -------------------------------------------------- déduit les portes obligatoires si elles n'ont qu'un voisin. rapide.
 
-deduceDoorStatus :: SolvingData -> SearchResult
+deduceDoorStatus :: SolvingData -> SearchResult -- 'd'
 deduceDoorStatus d = let
   nodesThatMustBeDoors = [n | (n,ns) <- adjacency (graph d), length ns == 1]
   in case setObligatoryDoors nodesThatMustBeDoors (doorStatus d) of
@@ -138,14 +138,14 @@ deduceDoorStatus d = let
                      then NotBetter d
                      else Better d { _doorStatus = newDoors }
 
--------------------------------------------------- trouve les edges en trop des portes dans des paths. rapide.
+--------------------------------------------------
 
-removeEdges :: SolvingData -> SearchResult
+-- trouve les edges en trop des portes dans des paths. rapide.
+removeEdges :: SolvingData -> SearchResult -- 'e'
 removeEdges d = let
-  obligDoors = (obligatoryDoors . doorStatus) d
   extraEdgesOfObligatoryDoorsInPath = [(n, ns \\ [n']) |
                                        (n,ns) <- (adjacency (graph d)),
-                                       obligDoors `contains` n,
+                                       ((obligatoryDoors . doorStatus) d) `contains` n,
                                        n' <- maybeToList (_findOtherEnd n (paths d))]
   reductions = [withoutEdge (n,n') | (n,ns) <- extraEdgesOfObligatoryDoorsInPath, n' <- ns]
   in if empty reductions then NotBetter d else Better $ foldr (.) id reductions d
@@ -157,13 +157,13 @@ _findOtherEnd n ps = foldM otherEnd n ps where
                | otherwise = Nothing
     where (f,l) = bothEnds p
 
--------------------------------------------------- trouve les paths de longeur 3. rapide.
+--------------------------------------------------
 
+-- trouve les paths de longeur 3. rapide.
 reduceGraph3 :: SolvingData -> SearchResult
-reduceGraph3 d = _firstReduction d reductions where
-  reductions = [reduce3NodesIntoPath (n,ns) |
-                (n,ns) <- adjacency (graph d),
-                not (possibleDoors (doorStatus d) `contains` n) && length ns == 2]
+reduceGraph3 d = _firstReduction d [reduce3NodesIntoPath (n,ns) |
+                                    (n,ns) <- adjacency (graph d),
+                                    not (possibleDoors (doorStatus d) `contains` n) && length ns == 2] where
   reduce3NodesIntoPath (nw,[n1,n2]) = addPath [n1, nw, n2] d
 
 _firstReduction :: SolvingData -> [Maybe SolvingData] -> SearchResult
@@ -171,19 +171,19 @@ _firstReduction d [] = NotBetter d
 _firstReduction d (Nothing:_) = NoSolution
 _firstReduction d ((Just d'):_) = Better d'
 
--------------------------------------------------- trouve des paths de longeur 2. lent.
+--------------------------------------------------
 
+-- trouve des paths de longeur 2. lent.
 turnEdgeIntoPathIfNoSolutionOtherwise :: (SolvingData -> Bool) -> SolvingData -> SearchResult
-turnEdgeIntoPathIfNoSolutionOtherwise isImpossible d = _firstReduction d reducedGraphs where
-  reducedGraphs = [addEdgePath edge d |
-                   edge <- _everyNonPathEdge d,
-                   isImpossible (withoutEdge edge d)]
+turnEdgeIntoPathIfNoSolutionOtherwise isImpossible d = _firstReduction d [addEdgePath edge d |
+                                                                          edge <- _everyNonPathEdge d,
+                                                                          isImpossible (withoutEdge edge d)]
 
+-- trouve des murs.
 turnEdgeIntoWallIfNoSolutionOtherwise :: (SolvingData -> Bool) -> SolvingData -> SearchResult
-turnEdgeIntoWallIfNoSolutionOtherwise isImpossible d = _firstReduction d reducedGraphs where
-  reducedGraphs = [Just (withoutEdge edge d) |
-                   edge <- _everyNonPathEdge d,
-                   maybe True isImpossible (addEdgePath edge d)]
+turnEdgeIntoWallIfNoSolutionOtherwise isImpossible d = _firstReduction d [Just (withoutEdge edge d) |
+                                                                          edge <- _everyNonPathEdge d,
+                                                                          maybe True isImpossible (addEdgePath edge d)]
 
 _everyNonPathEdge d =
     [(e1,e2) |
@@ -212,11 +212,8 @@ reduceGraphX = turnEdgeIntoPathIfNoSolutionOtherwise (obviouslyNoSolution2 `onRe
 onReduced :: (SolvingData -> Bool) -> (SolvingData -> SearchResult) -> (SolvingData -> Bool)
 f `onReduced` g = maybe True f . toMaybe . g
 
-obviouslyNoSolution :: SolvingData -> SearchResult -- SLOW
-obviouslyNoSolution d =
-  if obviouslyNoSolution1 d || obviouslyNoSolution2 d
-  then NoSolution
-  else NotBetter d
+obviouslyNoSolution :: SolvingData -> Bool
+obviouslyNoSolution d = obviouslyNoSolution1 d || obviouslyNoSolution2 d -- SLOW
 
 obviouslyNoSolution1 d = any (doesNotHaveEnoughNeighbors (doorStatus d)) (adjacency (graph d))
 obviouslyNoSolution2 d = any (hasOnlyTwoNeighborsThatAreTheEndsOfASinglePath (paths d)) (adjacency (graph d))
