@@ -13,7 +13,8 @@ allPuzzles = [
   jsPuz, daily6x9Puz, sixRoomsPuz, excellentHandMadePuz, book10x15Puz, hardBook10x15Puz,
   valentinePuz, daily7x10Puz, manyDoors, dailyOther7x10, daily5x8, mars4Puz,
   unitTestReduce3RemoveEdges,
-  feb13, mar14, mar17
+  feb13, mar14, mar17,
+  alcazam
   ]
 
 noSolutionPuz = buildPuzzle (2,2) [(1,0),(1,1)] [(1,0)] [(0,1)]
@@ -113,6 +114,10 @@ mar14 = buildPuzzle (7,10) [(0,0),(2,0),(4,0),(0,2),(0,4),(0,6),(0,8),(1,9),(3,9
 mar17 = buildPuzzle (7,10) [(0,0),(1,0),(2,0),(3,0),(4,0),(5,0),(6,1),(6,3),(6,4),(6,5),(6,6),(6,8),(5,9),(3,9),(1,9),(0,8),(0,7),(0,5),(0,3),(0,2),(0,1)]
         [(2,1),(1,2),(3,5),(0,6),(1,6),(5,5),(6,5),(6,7),(4,7),(2,7)] [(1,2),(4,2),(1,4),(3,5),(1,6)]
 
+alcazam = buildPuzzle (10,10) [(0,0),(2,0),(9,0),(0,2),(2,9),(5,9),(9,9)] -- https://github.com/sjb3d/alcazam
+          [(4,0),(2,1),(3,1),(4,1),(5,1),(2,3),(7,3),(2,4),(0,5),(4,5),(7,5)]
+          [(7,0),(1,2),(3,2),(5,2),(7,4),(3,6),(6,6),(1,7),(8,8),(3,9),(6,9)]
+
 -- size doors wallsDown wallsRight
 -- "1 13".split.map(&:to_i).each_slice(2) { |n,m| print "(#{n},#{m})," }; puts; puts
 
@@ -120,30 +125,6 @@ mar17 = buildPuzzle (7,10) [(0,0),(1,0),(2,0),(3,0),(4,0),(5,0),(6,1),(6,3),(6,4
 {-
 
 http://edderiofer.blogspot.fr/2014/11/parity-in-alcazar-and-other-such-loop.html
-
-https://github.com/sjb3d/alcazam
-+   +---+   +---+---+---+---+---+---+   +
-|                               |       |
-+   +   +   +   +---+   +   +   +   +   +
-|                                       |
-+   +   +---+---+---+---+   +   +   +   +
-        |       |       |               |
-+   +   +   +   +   +   +   +   +   +   +
-|                                       |
-+   +   +---+   +   +   +   +---+   +   +
-|                               |       |
-+   +   +---+   +   +   +   +   +   +   +
-|                                       |
-+---+   +   +   +---+   +   +---+   +   +
-|               |           |           |
-+   +   +   +   +   +   +   +   +   +   +
-|       |                               |
-+   +   +   +   +   +   +   +   +   +   +
-|                                   |   |
-+   +   +   +   +   +   +   +   +   +   +
-|               |           |           |
-+---+---+   +---+---+   +---+---+---+   +
-
 
 http://david-westreicher.github.io/2014/11/06/alcasat/
 xxxxxxxxxxxxxxxxxxxxxxxxx

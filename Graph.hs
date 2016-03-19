@@ -66,17 +66,20 @@ _updatePaths3 n1 nw n2 ps = -- [n1,nw,n2] are distinct, (flatten ws) too.
 
 
 -- This type is the adjacency lists of the graph that collapses obligatory paths into a single edge.
-type Graph = [(Node, [Node])]
+newtype Graph = Graph { adjacency :: [(Node, [Node])] }
 type Edge = (Node, Node)
 
 allNodes :: Graph -> [Node]
-allNodes g = map fst g
+allNodes g = map fst (adjacency g)
 
 neighbors :: Graph -> Node -> [Node]
-neighbors g node = fromMaybe [] $ lookup node g
+neighbors g node = fromMaybe [] $ lookup node (adjacency g)
+
+updateNodes :: ((Node, [Node]) -> (Node, [Node])) -> Graph -> Graph
+updateNodes f = Graph . map f . adjacency
 
 updateGraphForNewPath :: Path -> Graph -> Graph
-updateGraphForNewPath ps = mapMaybe update where
+updateGraphForNewPath ps g = Graph (mapMaybe update (adjacency g)) where
   (np1, np2) = bothEnds ps
   toDelete = inside ps
   -- delete nodes that are inside the path
@@ -103,6 +106,8 @@ doorStatus = _doorStatus
 graph = _graph
 paths = _paths
 
+puzzleSize = size . puzzle
+
 {-
 
 TODO: make it easily provable that every instance of Graph satisfies
@@ -119,12 +124,11 @@ buildInitialData :: Puzzle -> SolvingData
 buildInitialData puz = let
   (w,h) = size puz
   cToN = coordsToNode (size puz)
-  trimIsolatedNodes d = d { _graph = filter (not . isolated) (graph d) } where isolated (n,ns) = empty ns
+  trimIsolatedNodes adjs = filter (not . empty . snd) adjs
   -- nodes that are isolated in the puzzle are considered not part of the problem, and are left out of the graph. (see valentinePuz)
-  in trimIsolatedNodes $
-     SolvingData { _puzzle = puz,
-                   _graph = [(cToN (x,y), map cToN $ neighborsOf puz (x,y))
-                            | y <- [0..h-1], x <- [0..w-1]],
+  in SolvingData { _puzzle = puz,
+                   _graph = Graph (trimIsolatedNodes [(cToN (x,y), map cToN $ neighborsOf puz (x,y))
+                                                     | y <- [0..h-1], x <- [0..w-1]]),
                    _doorStatus = NoClueAboutDoors $ map cToN (doors puz),
                    _paths = [] }
 
@@ -142,18 +146,14 @@ neighborsOf puz (x,y) = let (w,h) = size puz in
 -- from ghci.
 -- TODO: find a better name 
 start :: Puzzle -> SolvingData
-start puz = let
-  d = buildInitialData puz
-  newDoorStatus = case _exploitDoorParity d of
-    Just ds -> ds
-    Nothing -> error "no solutions because of doors parity"
-  in d { _doorStatus = newDoorStatus }
+start puz = let d = buildInitialData puz
+            in d { _doorStatus = fromMaybe (error "no solutions because of doors parity") (_exploitDoorParity d) }
 
 _puzzleParity :: SolvingData -> Parity
 _puzzleParity d = let
-  ns = map fst (graph d)
-  ev = evenCoords ((size . puzzle) d)
-  od = oddCoords ((size . puzzle) d)
+  ns = allNodes (graph d)
+  ev = evenCoords (puzzleSize d)
+  od = oddCoords (puzzleSize d)
   in case count od ns - count ev ns of
     1 -> BothOdd
     -1 -> BothEven
@@ -162,8 +162,8 @@ _puzzleParity d = let
 
 _exploitDoorParity :: SolvingData -> Maybe DoorStatus
 _exploitDoorParity d = exploitDoorParity' (_puzzleParity d) (doorStatus d) where
-  ev = evenCoords ((size . puzzle) d)
-  od = oddCoords ((size . puzzle) d)
+  ev = evenCoords (puzzleSize d)
+  od = oddCoords (puzzleSize d)
   exploitDoorParity' BothOdd ds = updateDoors od ds
   exploitDoorParity' BothEven ds = updateDoors ev ds
   exploitDoorParity' EvenAndOdd ds@(NoClueAboutDoors ns) = let
@@ -207,13 +207,16 @@ addPath ns d =
                                _graph = newGraph,
                                _doorStatus = ds }
 
-withoutEdge :: SolvingData -> Edge -> SolvingData
-withoutEdge d (e1,e2) = d { _graph = map deleteEdge (_graph d) } where
+addEdgePath (n1,n2) = addPath [n1,n2]
+
+withoutEdge :: Edge -> SolvingData -> SolvingData
+withoutEdge (e1,e2) d = d { _graph = updateNodes deleteEdge (graph d) } where
   deleteEdge :: (Node, [Node]) -> (Node, [Node])
   deleteEdge (e,es) | e == e1 = (e, delete e2 es)
   deleteEdge (e,es) | e == e2 = (e, delete e1 es)
   deleteEdge (e,es) = (e, es)
   -- ici faudrait ptêt error si l'edge est également un path 
+
 
 ----------------------------------------------------------------------- it's show time!
 
@@ -222,9 +225,9 @@ instance Show Puzzle where
 
 instance Show SolvingData where
   show d = asciiArt d ++
-    (intercalate " " $ map (\(n,ns) -> show n ++ show ns) (graph d)) ++
+    (intercalate " " $ map (\(n,ns) -> show n ++ show ns) ((adjacency . graph) d)) ++
     "\n" ++ (show . length . allNodes . graph) d ++ " nodes, " ++
-    (show . length . concat . map snd . graph) d ++ " edges, doors=" ++
+    (show . length . concat . map snd . adjacency . graph) d ++ " edges, doors=" ++
     show (doorStatus d) ++ " | paths=" ++ showList (paths d)
     where showList = init . tail . show -- trim [ and ]
 
@@ -237,7 +240,7 @@ asciiArtSolution d p = asciiArt' d [p]
 asciiArt' :: SolvingData -> [Path] -> String
 asciiArt' d ps = (unlines . map concat) cellMatrix where
   g = graph d
-  sz = size (puzzle d)
+  sz = puzzleSize d
   (width, height) = sz
   cToN = coordsToNode sz
   nToC = nodeToCoords sz

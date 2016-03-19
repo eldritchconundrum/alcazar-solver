@@ -12,7 +12,7 @@ sameReductions :: (String, String) -> Puzzle -> Bool -- TODO: utiliser NotBetter
 sameReductions (sg1, sg2) puz = let
   d1 = (extract . reduceStrategy sg1 . start) puz
   d2 = (extract . reduceStrategy sg2 . start) puz
-  in paths d1 == paths d2 && doorStatus d1 == doorStatus d2 && graph d1 == graph d2
+  in paths d1 == paths d2 && doorStatus d1 == doorStatus d2 && adjacency (graph d1) == adjacency (graph d2)
 
 assertMsgIO s b = if b then return () else error s
 assertMsg s b = if b then id else error s
@@ -32,7 +32,7 @@ m = main
 main = do
   timeAll defaultStrategy
   tests
-  mapM_ (solveAndPrint "3*") instantaneousPuzzles
+  --mapM_ (solveAndPrint "3*") instantaneousPuzzles
   --printReduced "3*eb*3*2*" feb13
   --printReduced "3*d3*23*23*23*23*" valentinePuz --solveAndPrint "3*d3*" valentinePuz
   --printReduced "3*d3*b*e3*b*23*23*23*" daily6x9Puz -- solveAndPrint "3*d3*b*e3*b*" daily6x9Puz -- js: 23m
@@ -45,6 +45,7 @@ main = do
   --solveAndPrint "3*b*223*2223*23*23*" jsPuz -- js: 0s
   --solveAndPrint "3*2*" excellentHandMadePuz -- js: 21h
   --solveAndPrint defaultStrategy mar17
+  printReduced defaultStrategy alcazam
 
 printReduced strat puz = timeIO "reduced in" $ (print . reduceStrategy strat . start) puz
 solveAndPrint strat puz = do
@@ -68,6 +69,9 @@ timeAll strat = timeIO "reduce all" $ sequence_ $ map (printReduced strat) allPu
 defaultStrategy = "(((3*2)*eld)*b)*" -- 1.44, 8.0
 -- si '2' n'a rien trouvé, 'l' ne trouvera rien
 
+-- "((((3*2)*eld)*b)*X)*"
+
+
 makeMoreDifficult puz = mapM_ try (moreDifficult puz) where -- by keeping it reducable by defaultStrategy
   try :: Puzzle -> IO ()
   try p = do
@@ -86,7 +90,7 @@ makeMoreDifficult puz = mapM_ try (moreDifficult puz) where -- by keeping it red
 
 Pour l'instant j'ai un bruteforce, mais avant de l'exécuter je
 simplifie le problème en déduisant des faits de la même manière que je
-résous manuellement. Les techniques de résolution ont une lettre
+résoudrais manuellement. Les techniques de résolution ont une lettre
 associée.
 
 3 : localisation des paths de longueur 3 (réduction des noeuds sans
@@ -108,19 +112,16 @@ exploitation de la parité : sur quels (x+y)`mod`2 sont les doors ?
 
 TODO: si "le graphe sans une door" est impossible, alors cette door devient obligatoire
 
-TODO: le contraire du bouncing : supposer qu'un edge quelconque est un path, et si c'est impossible, alors l'enlever du graphe.
+TODO: réduction "réduction sur toutes les doorPairs, élimination de ceux qui conduisent à des impossibilités, et récupération de l'intersection des paths/reducs trouvés partout"
 
--- graphe "prouvablement impossible" si :
--- doorStatus impossible (<2 possible doors, ou >2 obligatory doors)
--- >1 composantes fortement connexes
+TODO: graphe "prouvablement impossible" si >1 composantes fortement connexes
 
 TODO: tenter de découper le graphe en deux "zones" de superficie pas trop inégale qui ne communiquent que via 1 ou 2 bottlenecks, résoudre/simplifier les sous-graphes, puis combiner ça
 
 TODO: si deux sous-graphes ne sont connectés que par un seul edge,
 alors il y a une door oblig de chaque côté
 
-TODO: la partie droite de excellentHandMadePuz résiste bien à toutes les réductions actuelles. innover ?
-TODO: sinon, à part sixRoomsPuz et daily5x8, tout est solvé sans backtracking
+TODO: voir quels puzzles ne sont pas résolus sans bruteForce ou réduits trop lentement
 
 -}
 
@@ -130,11 +131,9 @@ TODO: sinon, à part sixRoomsPuz et daily5x8, tout est solvé sans backtracking
 TODO: prendre en param la stratégie, la tester sur tous les problèmes, et mesurer la meilleure.
 TODO: trouver des problèmes plus difficiles/grands, qui résistent à defaultStrategy. combiner des existants ?
 
-l'idée de stratégie en tant que DSL n'est pas une utilisation extraordinairement adaptée d'un DSL, vu qu'on est presque seulement intéressé par ce qui est de la forme (((A*B)*C)*D. Mais ça offre aussi la possibilité d'afficher les réductions qui ont été réalisées sous forme visualisable simplement. TODO: le faire
+l'idée de stratégie en tant que DSL n'est pas une utilisation extraordinairement adaptée d'un DSL, vu qu'on est presque seulement intéressé par ce qui est de la forme (((A*B)*C)*. Mais ça offre aussi la possibilité d'afficher les réductions qui ont été réalisées sous forme visualisable simplement. TODO: le faire
 
 A TESTER : que deviens le code si on représente les doors potentielles comme étant connectées dans le graphe à un même fake node invisible ? plus simple ?
-
-TODO: avant bruteforce, re-réduire après itération sur les paires de portes. (essayer sur excellentHandMadePuz ?)
 
 backtracking : l'intégrer au reste du moteur quand on ne sait plus réduire, au lieu d'être une alternative séparée comme actuellement.
 
@@ -151,8 +150,6 @@ quels edges d'un graphe conduiraient à > 1 composantes connexes s'ils
 étaient enlevés ?
   hmm c'est quoi le moyen naïf déjà ? O(n^?) ?
   trouver d'abord les cycles, puis essayer les edges pas entre deux noeuds d'un cycle ?
-
-TODO: finir le renommage : w -> p
 
 TO NOT DO: profiling, changer les structures de données en Array ou
 autre, voir si c'est plus performant... ne pas faire ça parce que 1)
