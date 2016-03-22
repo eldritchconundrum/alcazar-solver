@@ -13,8 +13,8 @@ allPuzzles = [
   jsPuz, daily6x9Puz, sixRoomsPuz, excellentHandMadePuz, book10x15Puz, hardBook10x15Puz,
   valentinePuz, daily7x10Puz, manyDoors, dailyOther7x10, daily5x8, mars4Puz,
   unitTestReduce3RemoveEdges,
-  feb13, mar14, mar17,
-  alcazam
+  feb13, mar14, mar17, mar20,
+  alcazam, alcasat1Puz, alcasat2Puz
   ]
 
 noSolutionPuz = buildPuzzle (2,2) [(1,0),(1,1)] [(1,0)] [(0,1)]
@@ -114,80 +114,130 @@ mar14 = buildPuzzle (7,10) [(0,0),(2,0),(4,0),(0,2),(0,4),(0,6),(0,8),(1,9),(3,9
 mar17 = buildPuzzle (7,10) [(0,0),(1,0),(2,0),(3,0),(4,0),(5,0),(6,1),(6,3),(6,4),(6,5),(6,6),(6,8),(5,9),(3,9),(1,9),(0,8),(0,7),(0,5),(0,3),(0,2),(0,1)]
         [(2,1),(1,2),(3,5),(0,6),(1,6),(5,5),(6,5),(6,7),(4,7),(2,7)] [(1,2),(4,2),(1,4),(3,5),(1,6)]
 
+mar20 = buildPuzzle (7,10) [(1,0),(6,2),(0,3),(6,4),(6,5),(0,7),(0,9),(5,9)]
+        [(0,1),(2,1),(4,1),(5,1),(1,3),(0,5),(3,6)]
+        [(4,2),(4,4),(3,6),(1,9),(2,7)]
+
 alcazam = buildPuzzle (10,10) [(0,0),(2,0),(9,0),(0,2),(2,9),(5,9),(9,9)] -- https://github.com/sjb3d/alcazam
           [(4,0),(2,1),(3,1),(4,1),(5,1),(2,3),(7,3),(2,4),(0,5),(4,5),(7,5)]
           [(7,0),(1,2),(3,2),(5,2),(7,4),(3,6),(6,6),(1,7),(8,8),(3,9),(6,9)]
+
+alcasat1Puz = buildPuzzle (12,18) [(0,4),(11,2),(11,7),(11,12),(11,13),(11,14)]
+              [(1,2),(1,5),(1,6),(1,8),(1,11),(1,13),(1,14),(2,3),(2,7),(2,8),(2,10),(2,12),(3,0),(3,1),(3,4),(3,6),(3,9),(3,11),(3,13),(4,1),(4,8),(4,10),(4,14),(5,3),(5,9),(6,4),(6,15),(7,3),(7,8),(7,13),(8,2),(8,5),(8,11),(9,3),(9,13),(9,16),(10,4),(10,7),(10,9),(10,14),(11,13)]
+              [(0,4),(0,5),(1,0),(1,1),(1,7),(1,10),(1,16),(2,6),(2,15),(3,3),(3,7),(3,16),(4,3),(4,5),(4,12),(4,13),(4,16),(5,1),(5,7),(5,8),(5,9),(5,10),(5,13),(5,14),(6,2),(6,6),(6,7),(6,11),(6,12),(6,15),(6,16),(7,5),(7,6),(8,2),(8,7),(8,9),(8,10),(8,12),(8,15),(9,0),(9,1),(9,6),(9,11),(9,12),(9,16),(10,2),(10,3),(10,5),(10,7),(10,8),(10,9),(10,11),(10,13)]
+
+alcasat2Puz = buildPuzzle (8,11) [(0,3),(0,9),(1,0),(2,0),(4,0),(5,0),(7,1),(7,7)]
+              [(0,7),(1,1),(1,3),(1,4),(1,6),(2,4),(2,6),(2,8),(3,6),(3,8),(3,9),(4,4),(4,6),(5,2),(5,5),(6,3),(6,4),(6,5),(6,8),(7,7)]
+              [(0,9),(1,0),(2,1),(2,2),(3,3),(3,5),(4,0),(4,1),(4,4),(4,8),(5,2),(5,7),(6,1)]
 
 -- size doors wallsDown wallsRight
 -- "1 13".split.map(&:to_i).each_slice(2) { |n,m| print "(#{n},#{m})," }; puts; puts
 
 
+
+{-  -- http://david-westreicher.github.io/2014/11/06/alcasat/
+
+alcasat1 = ["xxxxxxxxxxxxxxxxxxxxxxxxx",
+            "x0-0x0-0-0-0-0-0-0-0x0-0x",
+            "x|x|x|xxx x x x x x|x|x|x",
+            "x0 0x0-0-0-0x0-0-0 0x0 0x",
+            "x|x|x xxxxx|x|x x|x|x|x|x",
+            "x0 0-0 0-0 0 0x0-0x0-0x0 ",
+            "x|xxx|x|x|x|x|x|xxx x x|x",
+            "x0 0-0 0x0x0-0 0-0-0-0x0x",
+            "x|x|xxx|x|xxx xxx xxx|x|x",
+            " 0x0 0-0 0 0-0-0 0-0-0 0x",
+            "x|x|x|xxx|x|xxx|x|x xxx|x",
+            "x0x0-0 0-0x0-0 0x0-0-0x0x",
+            "x|xxx x|x x x|x|xxx x|x|x",
+            "x0-0-0x0-0-0 0x0x0-0x0 0x",
+            "x xxx|xxx x|x|x|x|x|x|x|x",
+            "x0-0x0-0x0-0x0x0-0x0-0x0 ",
+            "x|x|xxx|x|x x|x x x xxx|x",
+            "x0 0-0-0 0-0x0-0-0-0-0x0x",
+            "x|xxxxx xxx|x xxx x x|x|x",
+            "x0-0 0-0-0-0x0-0-0x0-0x0x",
+            "x x|x|xxx xxx|x x|x|xxx|x",
+            "x0-0x0-0-0-0x0 0-0x0-0 0x",
+            "x|x xxx xxx|x|x|x x x|x|x",
+            "x0-0-0-0-0 0-0x0-0-0x0x0x",
+            "x xxx xxx|x x x xxx|x|x|x",
+            "x0-0-0-0-0x0-0x0-0x0x0 0 ",
+            "x|x xxx x x|x|x|x|x|x|x|x",
+            "x0-0-0-0-0x0x0-0 0-0 0x0-",
+            "x xxx xxx|x|x xxx xxx|xxx",
+            "x0-0-0-0-0 0x0-0-0 0-0 0-",
+            "x|xxx x xxx|x|x x|x|xxx|x",
+            "x0 0-0x0-0 0-0x0-0x0 0-0x",
+            "x|x|x|x|x|x xxx|x x|x|x x",
+            "x0 0x0 0x0x0-0x0-0-0x0-0x",
+            "x|x|x|x|x|x|x|x x xxx x|x",
+            "x0-0 0-0 0-0 0-0-0-0-0-0x",
+            "xxxxxxxxxxxxxxxxxxxxxxxxx"]
+
+alcasat2 = ["xxx x xxx x|xxxxx",
+            "x0-0x0-0-0x0-0-0x",
+            "x|x|x|x x|x x x|x",
+            "x0 0-0x0-0x0-0x0 ",
+            "x|xxx x|x x|x|x|x",
+            "x0 0-0x0 0-0x0 0x",
+            "x|x|x|x|x|xxx|x|x",
+            " 0-0 0 0x0 0-0 0x",
+            "x xxx|x|x|x|xxx|x",
+            "x0-0-0 0-0x0-0-0x",
+            "x|xxxxx xxx xxx x",
+            "x0-0-0-0x0-0-0-0x",
+            "x x x x|x|xxxxx|x",
+            "x0-0-0-0 0-0 0-0x",
+            "x|xxxxxxxxx|x|x x",
+            "x0-0-0 0-0 0x0-0-",
+            "xxx x|x|x|x|x xxx",
+            "x0-0 0-0 0x0-0-0x",
+            "x|x|xxxxx|x xxx|x",
+            " 0x0-0-0-0 0-0 0x",
+            "x|x x xxx x|x|x|x",
+            "x0-0-0-0-0-0 0-0x",
+            "xxxxxxxxxxxxxxxxx"]
+
+
+--alcasat1Puz = convert alcasat1 (12,18)
+--alcasat2Puz = convert alcasat2 (8,11)
+
+convert strs (w,h) =
+  buildPuzzle (w,h)
+  [(x,y) | x <- [0..w-1], y <- [0..h-1], x == 0 || y == 0 || x == w-1 || y == h-1, _door (w,h) strs x y]
+  [(x,y) | x <- [0..w-1], y <- [0..h-2], _wd strs x y]
+  [(x,y) | x <- [0..w-2], y <- [0..h-1], _wr strs x y]
+_door (w,h) strs x y | x == 0 = not $ _isWallAt (x,y) strs L
+_door (w,h) strs x y | y == 0 = not $ _isWallAt (x,y) strs U
+_door (w,h) strs x y | x == w-1 = not $ _isWallAt (x,y) strs R
+_door (w,h) strs x y | y == h-1 = not $ _isWallAt (x,y) strs D
+_wd strs x y = _isWallAt (x,y) strs D
+_wr strs x y = _isWallAt (x,y) strs R
+data Direction = U | D | L | R
+_xOffset R = 1
+_xOffset L = -1
+_xOffset _ = 0
+_yOffset D = 1
+_yOffset U = -1
+_yOffset _ = 0
+_isWallAt (x,y) strs dir = let
+  xx = 2 * x + 1 + _xOffset dir
+  yy = 2 * y + 1 + _yOffset dir
+  c = (strs !! yy) !! xx
+  in case c of
+    'x' -> True
+    '-' -> False
+    '|' -> False
+    ' ' -> False
+    _ -> error $ "c'est n'imp: " ++ show c
+
+-}
+
+
 {-
 
 http://edderiofer.blogspot.fr/2014/11/parity-in-alcazar-and-other-such-loop.html
-
-http://david-westreicher.github.io/2014/11/06/alcasat/
-xxxxxxxxxxxxxxxxxxxxxxxxx
-x0-0x0-0-0-0-0-0-0-0x0-0x
-x|x|x|xxx x x x x x|x|x|x
-x0 0x0-0-0-0x0-0-0 0x0 0x
-x|x|x xxxxx|x|x x|x|x|x|x
-x0 0-0 0-0 0 0x0-0x0-0x0 
-x|xxx|x|x|x|x|x|xxx x x|x
-x0 0-0 0x0x0-0 0-0-0-0x0x
-x|x|xxx|x|xxx xxx xxx|x|x
- 0x0 0-0 0 0-0-0 0-0-0 0x
-x|x|x|xxx|x|xxx|x|x xxx|x
-x0x0-0 0-0x0-0 0x0-0-0x0x
-x|xxx x|x x x|x|xxx x|x|x
-x0-0-0x0-0-0 0x0x0-0x0 0x
-x xxx|xxx x|x|x|x|x|x|x|x
-x0-0x0-0x0-0x0x0-0x0-0x0 
-x|x|xxx|x|x x|x x x xxx|x
-x0 0-0-0 0-0x0-0-0-0-0x0x
-x|xxxxx xxx|x xxx x x|x|x
-x0-0 0-0-0-0x0-0-0x0-0x0x
-x x|x|xxx xxx|x x|x|xxx|x
-x0-0x0-0-0-0x0 0-0x0-0 0x
-x|x xxx xxx|x|x|x x x|x|x
-x0-0-0-0-0 0-0x0-0-0x0x0x
-x xxx xxx|x x x xxx|x|x|x
-x0-0-0-0-0x0-0x0-0x0x0 0 
-x|x xxx x x|x|x|x|x|x|x|x
-x0-0-0-0-0x0x0-0 0-0 0x0-
-x xxx xxx|x|x xxx xxx|xxx
-x0-0-0-0-0 0x0-0-0 0-0 0-
-x|xxx x xxx|x|x x|x|xxx|x
-x0 0-0x0-0 0-0x0-0x0 0-0x
-x|x|x|x|x|x xxx|x x|x|x x
-x0 0x0 0x0x0-0x0-0-0x0-0x
-x|x|x|x|x|x|x|x x xxx x|x
-x0-0 0-0 0-0 0-0-0-0-0-0x
-xxxxxxxxxxxxxxxxxxxxxxxxx
-
-xxx x xxx x|xxxxx
-x0-0x0-0-0x0-0-0x
-x|x|x|x x|x x x|x
-x0 0-0x0-0x0-0x0 
-x|xxx x|x x|x|x|x
-x0 0-0x0 0-0x0 0x
-x|x|x|x|x|xxx|x|x
- 0-0 0 0x0 0-0 0x
-x xxx|x|x|x|xxx|x
-x0-0-0 0-0x0-0-0x
-x|xxxxx xxx xxx x
-x0-0-0-0x0-0-0-0x
-x x x x|x|xxxxx|x
-x0-0-0-0 0-0 0-0x
-x|xxxxxxxxx|x|x x
-x0-0-0 0-0 0x0-0-
-xxx x|x|x|x|x xxx
-x0-0 0-0 0x0-0-0x
-x|x|xxxxx|x xxx|x
- 0x0-0-0-0 0-0 0x
-x|x x xxx x|x|x|x
-x0-0-0-0-0-0 0-0x
-xxxxxxxxxxxxxxxxx
 
 https://pbs.twimg.com/media/CAtS1yPWgAA7jtY.png:large
 

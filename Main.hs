@@ -14,8 +14,8 @@ sameReductions (sg1, sg2) puz = let
   d2 = (extract . reduceStrategy sg2 . start) puz
   in paths d1 == paths d2 && doorStatus d1 == doorStatus d2 && adjacency (graph d1) == adjacency (graph d2)
 
-assertMsgIO s b = if b then return () else error s
-assertMsg s b = if b then id else error s
+assertMsgIO s b = if b then return () else error $ "Assertion failed: " ++ s
+assertMsg s b = if b then id else error $ "Assertion failed: " ++ s
 
 tests :: IO ()
 tests = do
